@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+
+Mango/x64/
+Mango/.vs
