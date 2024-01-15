@@ -11,11 +11,11 @@
 
 #include <glad/glad.h>
 
-class Shader
+class MyShader
 {
 public:
     unsigned int ID;
-    Shader(const GLchar* vertexPath, const GLchar* fragmentPath)
+    MyShader(const GLchar* vertexPath, const GLchar* fragmentPath)
     {
         // Shaders reading
         std::string vertexCode;

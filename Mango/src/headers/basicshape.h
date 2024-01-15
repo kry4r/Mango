@@ -14,8 +14,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "stb_image.h"
-#include "shader.h"
-#include "camera.h"
 
 
 GLfloat cubeVertices[] =
@@ -134,7 +132,7 @@ public:
     }
 
 
-    void drawShape(Shader shader, glm::mat4 view, glm::mat4 projection, Camera camera)
+    void drawShape(MyShader& shader, glm::mat4& view, glm::mat4& projection, Camera& camera)
     {
         shader.Use();
 
@@ -204,79 +202,79 @@ public:
     }
 
 
-    std::string getType()
+    std::string getShapeType()
     {
         return shapeType;
     }
 
 
-    glm::vec3 getPosition()
+    glm::vec3 getShapePosition()
     {
         return shapePosition;
     }
 
 
-    GLfloat getAngle()
+    GLfloat getShapeAngle()
     {
         return shapeAngle;
     }
 
 
-    glm::vec3 getRotationAxis()
+    glm::vec3 getShapeRotationAxis()
     {
         return shapeRotationAxis;
     }
 
 
-    glm::vec3 getScale()
+    glm::vec3 getShapeScale()
     {
         return shapeScale;
     }
 
 
-    GLuint getVAO()
+    GLuint getShapeVAO()
     {
         return shapeVAO;
     }
 
 
-    std::string getDiffusePath()
+    std::string getShapeDiffusePath()
     {
         return shapeDiffusePath;
     }
 
 
-    std::string getSpecPath()
+    std::string getShapeSpecPath()
     {
         return shapeSpecularPath;
     }
 
 
-    void setPosition(glm::vec3 position)
+    void setShapePosition(glm::vec3 position)
     {
         this->shapePosition = position;
     }
 
 
-    void setAngle(GLfloat angle)
+    void setShapeAngle(GLfloat angle)
     {
         this->shapeAngle = angle;
     }
 
 
-    void setRotationAxis(glm::vec3 rotationAxis)
+    void setShapeRotationAxis(glm::vec3 rotationAxis)
     {
         this->shapeRotationAxis = rotationAxis;
     }
 
 
-    void setScale(glm::vec3 scale)
+    void setShapeScale(glm::vec3 scale)
     {
         this->shapeScale = scale;
     }
 
 
-    void setDiffuseTexture(std::string _texDiffPath)
+    void setShapeDiffuseTexture(std::string _texDiffPath)
     {
         this->shapeDiffusePath = std::string(_texDiffPath);
 
@@ -299,7 +297,7 @@ public:
     }
 
 
-    void setSpecularTexture(std::string _texSpecPath)
+    void setShapeSpecularTexture(std::string _texSpecPath)
     {
         this->shapeSpecularPath = std::string(_texSpecPath);
 

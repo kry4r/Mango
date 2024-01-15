@@ -21,15 +21,21 @@
     <ClCompile Include="3rdparty\glad\src\glad.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="3rdparty\imgui\imgui.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\imgui\imgui_draw.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\imgui\imgui_impl_glfw_gl3.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\headers\basicshape.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\headers\camera.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\headers\MangoEngine.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\headers\mesh.h">
@@ -42,6 +48,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\headers\textureobject.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\headers\cubemap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\headers\lightobject.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\headers\imconfig.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

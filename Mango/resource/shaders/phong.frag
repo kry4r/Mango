@@ -1,4 +1,4 @@
-#version 330 core
+#version 400
 
 struct Material {
     sampler2D texture_diffuse1;

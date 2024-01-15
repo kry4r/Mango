@@ -1,6 +1,21 @@
-#version 330 core
+#version 400
 
-#define NR_POINT_LIGHTS 1
+struct Material {
+    sampler2D texture_diffuse1;
+    sampler2D texture_specular1;
+
+    float shininess;
+};
+
+struct LightObject {
+    vec3 position;
+    vec4 color;
+};
+
+
+uniform int lightCounter = 3;
+uniform LightObject lightArray[3];
+uniform Material material;
 
 out vec4 colorOutput;
 
@@ -8,10 +23,8 @@ in vec3 FragPosition;
 in vec2 TexCoords;
 in vec3 Normal;
 
-vec3 lightPosition = vec3(2.0f, -0.5f, 1.0f);
+vec4 albedoColor = vec4(1.0f);
 
-vec4 albedoColor = vec4(0.35f, 0.60f, 0.35f, 1.0f);
-vec4 lightColor = vec4(1.0f);
 
 vec4 colorLinear(vec4 colorVector);
 vec4 colorSRGB(vec4 colorVector);
@@ -19,17 +32,20 @@ vec4 colorSRGB(vec4 colorVector);
 
 void main()
 {
-    vec3 N = normalize(Normal);
-    vec3 L0 = normalize(lightPosition - FragPosition);
+    vec4 diffuse = vec4(0.0f);
 
-    float lambert = max(dot(N, L0), 0.0f);
+    for (int i = 0; i < lightCounter; i++)
+    {
+        vec3 N = normalize(Normal);
+        vec3 L = normalize(lightArray[i].position - FragPosition);
 
-    vec4 albedoCorrected = colorLinear(albedoColor);
-    vec4 lightCorrected = colorLinear(lightColor);
+        float lambert = max(dot(N, L), 0.0f);
 
-    vec4 diffuse = vec4(albedoCorrected.rgb * lightCorrected.rgb * lambert, 1.0f);
-    diffuse.rgb += vec3(0.003);
+        vec4 albedoCorrected = colorLinear(albedoColor);
+        vec4 lightCorrected = colorLinear(lightArray[i].color);
 
+        diffuse += vec4(albedoCorrected.rgb * lightCorrected.rgb * lambert, 1.0f);
+    }
     colorOutput = colorSRGB(diffuse);
 }
 

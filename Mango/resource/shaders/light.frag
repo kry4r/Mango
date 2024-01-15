@@ -1,5 +1,4 @@
-#version 330 core
-
+#version 400
 out vec4 color;
 
 void main()

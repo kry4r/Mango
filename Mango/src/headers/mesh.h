@@ -46,19 +46,19 @@ public:
         this->setupMesh();
     }
 
-    void Draw(Shader shader)
+    void Draw(MyShader shader)
     {
         GLuint diffuseNr = 1;
         GLuint specularNr = 1;
-        for(GLuint i = 0; i < this->textures.size(); i++)
+        for (GLuint i = 0; i < this->textures.size(); i++)
         {
             glActiveTexture(GL_TEXTURE0 + i);
 
             string number;
             string name = this->textures[i].type;
-            if(name == "texture_diffuse")
+            if (name == "texture_diffuse")
                 number = to_string(diffuseNr++);
-            else if(name == "texture_specular")
+            else if (name == "texture_specular")
                 number = to_string(specularNr++);
 
             glUniform1i(glGetUniformLocation(shader.ID, ("material." + name + number).c_str()), i);

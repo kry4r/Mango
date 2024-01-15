@@ -71,7 +71,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Code\Mango\Mango\3rdparty\assimp\include;C:\Code\Mango\Mango\3rdparty\glad\include;C:\Code\Mango\Mango\3rdparty\glfw\include;C:\Code\Mango\Mango\3rdparty\glm;C:\Code\Mango\Mango\3rdparty\stb;C:\Code\Mango\Mango\src\headers;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Code\Mango\Mango\3rdparty\assimp\include;C:\Code\Mango\Mango\3rdparty\glad\include;C:\Code\Mango\Mango\3rdparty\glfw\include;C:\Code\Mango\Mango\3rdparty\glm;C:\Code\Mango\Mango\3rdparty\stb;C:\Code\Mango\Mango\src\headers;C:\Code\Mango\Mango\3rdparty\imgui;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Code\Mango\Mango\library\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -134,12 +134,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="3rdparty\glad\src\glad.c" />
+    <ClCompile Include="3rdparty\imgui\imgui.cpp" />
+    <ClCompile Include="3rdparty\imgui\imgui_draw.cpp" />
+    <ClCompile Include="3rdparty\imgui\imgui_impl_glfw_gl3.cpp" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\headers\basicshape.h" />
     <ClInclude Include="src\headers\camera.h" />
-    <ClInclude Include="src\headers\MangoEngine.h" />
+    <ClInclude Include="src\headers\cubemap.h" />
+    <ClInclude Include="src\headers\imconfig.h" />
+    <ClInclude Include="src\headers\lightobject.h" />
     <ClInclude Include="src\headers\mesh.h" />
     <ClInclude Include="src\headers\model.h" />
     <ClInclude Include="src\headers\shader.h" />

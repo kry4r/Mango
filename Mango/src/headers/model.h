@@ -1,7 +1,3 @@
-//
-// Created by Nidhogg on 2024/1/12.
-//
-
 #ifndef MANGO_MODEL_H
 #define MANGO_MODEL_H
 #pragma once
@@ -36,9 +32,9 @@ public:
         this->loadModel(path);
     }
 
-    void Draw(Shader shader)
+    void Draw(MyShader shader)
     {
-        for(GLuint i = 0; i < this->meshes.size(); i++)
+        for (GLuint i = 0; i < this->meshes.size(); i++)
             this->meshes[i].Draw(shader);
     }
 
@@ -53,7 +49,7 @@ private:
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
 
-        if(!scene || scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) // if is Not Zero
+        if (!scene || scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) // if is Not Zero
         {
             cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << endl;
             return;
@@ -66,13 +62,13 @@ private:
 
     void processNode(aiNode* node, const aiScene* scene)
     {
-        for(GLuint i = 0; i < node->mNumMeshes; i++)
+        for (GLuint i = 0; i < node->mNumMeshes; i++)
         {
             aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
             this->meshes.push_back(this->processMesh(mesh, scene));
         }
 
-        for(GLuint i = 0; i < node->mNumChildren; i++)
+        for (GLuint i = 0; i < node->mNumChildren; i++)
         {
             this->processNode(node->mChildren[i], scene);
         }
@@ -85,7 +81,7 @@ private:
         vector<GLuint> indices;
         vector<Texture> textures;
 
-        for(GLuint i = 0; i < mesh->mNumVertices; i++)
+        for (GLuint i = 0; i < mesh->mNumVertices; i++)
         {
             Vertex vertex;
             glm::vec3 vector;
@@ -100,7 +96,7 @@ private:
             vector.z = mesh->mNormals[i].z;
             vertex.Normal = vector;
 
-            if(mesh->mTextureCoords[0])
+            if (mesh->mTextureCoords[0])
             {
                 glm::vec2 vec;
                 vec.x = mesh->mTextureCoords[0][i].x;
@@ -113,15 +109,15 @@ private:
             vertices.push_back(vertex);
         }
 
-        for(GLuint i = 0; i < mesh->mNumFaces; i++)
+        for (GLuint i = 0; i < mesh->mNumFaces; i++)
         {
             aiFace face = mesh->mFaces[i];
 
-            for(GLuint j = 0; j < face.mNumIndices; j++)
+            for (GLuint j = 0; j < face.mNumIndices; j++)
                 indices.push_back(face.mIndices[j]);
         }
 
-        if(mesh->mMaterialIndex >= 0)
+        if (mesh->mMaterialIndex >= 0)
         {
             aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
             // We assume a convention for sampler names in the shaders. Each diffuse texture should be named
@@ -148,15 +144,15 @@ private:
     vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, string typeName)
     {
         vector<Texture> textures;
-        for(GLuint i = 0; i < mat->GetTextureCount(type); i++)
+        for (GLuint i = 0; i < mat->GetTextureCount(type); i++)
         {
             aiString str;
             mat->GetTexture(type, i, &str);
             GLboolean skip = false;
 
-            for(GLuint j = 0; j < textures_loaded.size(); j++)
+            for (GLuint j = 0; j < textures_loaded.size(); j++)
             {
-                if(textures_loaded[j].path == str)
+                if (textures_loaded[j].path == str)
                 {
                     textures.push_back(textures_loaded[j]);
                     skip = true;
@@ -164,7 +160,7 @@ private:
                 }
             }
 
-            if(!skip)
+            if (!skip)
             {
                 Texture texture;
                 texture.id = TextureFromFile(str.C_Str(), this->directory);
@@ -194,10 +190,10 @@ GLint TextureFromFile(const char* path, string directory)
     glBindTexture(GL_TEXTURE_2D, textureID);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
     glGenerateMipmap(GL_TEXTURE_2D);
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     stbi_image_free(image);

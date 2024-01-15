@@ -21,7 +21,7 @@ public:
         glBindTexture(GL_TEXTURE_2D, m_texID);
 
         int width, height, numComponents;
-        unsigned char* texData = stbi_load(texPath, &width, &height, &numComponents, numComponents);
+        unsigned char* texData = stbi_load(texPath, &width, &height, &numComponents, 1);
         if (texData == NULL)
             std::cerr << "Loading failed : " << texPath << std::endl;
 
