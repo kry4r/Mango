@@ -125,14 +125,14 @@ public:
         shaderCubemap.Use();
 
         glm::mat4 view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
-        glUniformMatrix4fv(glGetUniformLocation(shaderCubemap.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(glGetUniformLocation(shaderCubemap.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        glUniformMatrix4fv(glGetUniformLocation(shaderCubemap.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(glGetUniformLocation(shaderCubemap.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
         glBindVertexArray(cubemapVAO);
         glActiveTexture(GL_TEXTURE0);
 
-        glUniform1i(glGetUniformLocation(shaderCubemap.ID, "cubemap"), 0);
-        glUniform1i(glGetUniformLocation(shaderLighting.ID, "cubemap"), 0);
+        glUniform1i(glGetUniformLocation(shaderCubemap.Program, "cubemap"), 0);
+        glUniform1i(glGetUniformLocation(shaderLighting.Program, "cubemap"), 0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureID);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 

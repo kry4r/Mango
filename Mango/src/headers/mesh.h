@@ -61,11 +61,11 @@ public:
             else if (name == "texture_specular")
                 number = to_string(specularNr++);
 
-            glUniform1i(glGetUniformLocation(shader.ID, ("material." + name + number).c_str()), i);
+            glUniform1i(glGetUniformLocation(shader.Program, ("material." + name + number).c_str()), i);
             glBindTexture(GL_TEXTURE_2D, this->textures[i].id);
         }
 
-        glUniform1f(glGetUniformLocation(shader.ID, "material.shininess"), 15.0f);
+        glUniform1f(glGetUniformLocation(shader.Program, "material.shininess"), 15.0f);
 
         glActiveTexture(GL_TEXTURE0);
 

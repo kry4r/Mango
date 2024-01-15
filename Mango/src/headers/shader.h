@@ -14,7 +14,7 @@
 class MyShader
 {
 public:
-    unsigned int ID;
+    unsigned int Program;
     MyShader(const GLchar* vertexPath, const GLchar* fragmentPath)
     {
         // Shaders reading
@@ -79,14 +79,14 @@ public:
         }
 
         // Shader Program
-        ID = glCreateProgram();
-        glAttachShader(ID, vertex);
-        glAttachShader(ID, fragment);
-        glLinkProgram(ID);
-        glGetShaderiv(ID, GL_COMPILE_STATUS, &success);
+        Program = glCreateProgram();
+        glAttachShader(Program, vertex);
+        glAttachShader(Program, fragment);
+        glLinkProgram(Program);
+        glGetShaderiv(Program, GL_COMPILE_STATUS, &success);
         if (!success)
         {
-            glGetProgramInfoLog(ID, 1024, NULL, infoLog);
+            glGetProgramInfoLog(Program, 1024, NULL, infoLog);
             std::cout << "ERROR::PROGRAM_LINKING_ERROR of type: " <<"\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
         }
 
@@ -97,7 +97,7 @@ public:
     // Uses the current shader
     void Use()
     {
-        glUseProgram(this->ID);
+        glUseProgram(this->Program);
     }
 };
 #endif //MANGO_SHADER_H
