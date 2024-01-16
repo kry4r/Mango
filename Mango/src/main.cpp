@@ -486,13 +486,19 @@ void imGuiSetup()
     ImGui::End();
 }
 
-
+// gBufferSetup函数用于设置G缓冲区，包括创建帧缓冲对象和绑定纹理附件。
+/**
+ * 设置G缓冲区。
+ * 生成并绑定帧缓冲区，创建并附加位置、法线和反照率纹理附件，
+ * 定义G缓冲区的颜色附件，创建并附加深度缓冲区，
+ * 检查帧缓冲区是否完整。
+ */
 void gBufferSetup()
 {
     glGenFramebuffers(1, &gBuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 
-    // Position
+    // 位置纹理
     glGenTextures(1, &gPosition);
     glBindTexture(GL_TEXTURE_2D, gPosition);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
@@ -502,7 +508,7 @@ void gBufferSetup()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
 
-    // Normals
+    // 法线纹理
     glGenTextures(1, &gNormal);
     glBindTexture(GL_TEXTURE_2D, gNormal);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
@@ -518,7 +524,7 @@ void gBufferSetup()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gColor, 0);
 
-    // Define the COLOR_ATTACHMENTS for the G-Buffer
+    // 定义GBuffer的颜色附件
     GLuint attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
     glDrawBuffers(3, attachments);
 
@@ -528,12 +534,18 @@ void gBufferSetup()
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WIDTH, HEIGHT);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, zBuffer);
 
-    // Check if the framebuffer is complete before continuing
+    // 检查frame buffer是否完整
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "Framebuffer not complete !" << std::endl;
 }
 
-
+// 设置SSAO相关参数
+/**
+ * 两个FrameBuffer分别用于存储SSAO的结果和模糊后的结果。
+ * 为每个FBO生成一个纹理，并将纹理绑定到FBO的颜色附件点上
+ * 生成Kernel进行采样
+ * 生成噪声纹理
+ */
 void ssaoSetup()
 {
     // SSAO Buffer
@@ -592,7 +604,12 @@ void ssaoSetup()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
-
+// 生成一个二维四边形，被用于renderbuffer
+/**
+ * 生成VAO与VBO来储存与管理四边形的顶点数据
+ * quadVertices数组，用于存储四边形的顶点数据
+ * 之后进行数据设置，绑定VAO与VBO，将顶点数据复制到缓冲区中，
+ */
 void gBufferQuad()
 {
     if (gBufferQuadVAO == 0)
@@ -643,11 +660,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
 
-    if (key == GLFW_KEY_F11 && action == GLFW_PRESS)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    //if (key == GLFW_KEY_F11 && action == GLFW_PRESS)
+        //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    if (key == GLFW_KEY_F12 && action == GLFW_PRESS)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //if (key == GLFW_KEY_F12 && action == GLFW_PRESS)
+        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     if (key >= 0 && key < 1024)
     {
