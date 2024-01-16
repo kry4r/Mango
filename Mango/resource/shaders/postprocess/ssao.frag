@@ -13,7 +13,7 @@ uniform int ssaoKernelSize;
 uniform int ssaoNoiseSize;
 uniform float ssaoRadius;
 uniform float ssaoPower;
-uniform vec3 samples[64];
+uniform vec3 samples[128];
 uniform mat4 projection;
 
 vec2 noiseScale = vec2(viewportWidth/ssaoNoiseSize, viewportHeight/ssaoNoiseSize);

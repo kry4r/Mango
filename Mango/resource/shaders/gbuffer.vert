@@ -11,10 +11,13 @@ out vec3 normal;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform mat4 modelViewProj;
+uniform mat4 prevModelViewProj;
 
 
 void main()
 {
+    // View space
     vec4 viewPos = view * model * vec4(position, 1.0f);
     worldPos = viewPos.xyz;
     gl_Position = projection * viewPos;
@@ -25,7 +28,7 @@ void main()
 
 
 
-
+    // World Space
 //    worldPos = vec3(model * vec4(position, 1.0f));
 //    normal = mat3(transpose(inverse(model))) * Normal;
 //    TexCoords = texCoords;

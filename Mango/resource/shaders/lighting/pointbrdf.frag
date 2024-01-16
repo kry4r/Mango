@@ -18,8 +18,8 @@ uniform sampler2D gColor;
 uniform sampler2D ssao;
 
 // Light source(s) informations
-uniform int lightCounter = 3;
-uniform LightObject lightArray[3];
+uniform int lightPointCounter = 3;
+uniform LightObject lightPointArray[3];
 
 uniform int gBufferView;
 uniform float materialRoughness;
@@ -37,6 +37,10 @@ float DistributionGGX(vec3 N, vec3 H, float roughness);
 float GeometryAttenuationGGXSmith(float NdotL, float NdotV, float roughness);
 vec3 colorLinear(vec3 colorVector);
 vec3 colorSRGB(vec3 colorVector);
+float saturate(float f);
+vec2 saturate(vec2 vec);
+vec3 saturate(vec3 vec);
+
 
 
 void main()
@@ -44,11 +48,11 @@ void main()
     // Retrieve G-Buffer informations
     vec3 worldPos = texture(gPosition, TexCoords).rgb;
     vec3 normal = texture(gNormal, TexCoords).rgb;
-    vec3 albedo = texture(gColor, TexCoords).rgb;
+    vec3 albedo = colorLinear(texture(gColor, TexCoords).rgb);
     float ao = texture(ssao, TexCoords).r;
     float depth = texture(gPosition, TexCoords).a;
 
-    vec3 V = normalize(viewPos - worldPos);
+    vec3 V = normalize(- worldPos);
     vec3 N = normalize(normal);
     vec3 R = normalize(-reflect(V, N));
 
@@ -57,18 +61,18 @@ void main()
     vec3 specular = vec3(0.0f);
 //    vec3 envMap = texture(cubemap, R).rgb;
 
-    for (int i = 0; i < lightCounter; i++)
+    for (int i = 0; i < lightPointCounter; i++)
     {
-        vec3 L = normalize(lightArray[i].position - worldPos);
+        vec3 L = normalize(lightPointArray[i].position - worldPos);
         vec3 H = normalize(L + V);
 
-        vec3 lightColor = colorLinear(lightArray[i].color.rgb);
-        float distanceL = distance(lightArray[i].position, worldPos);
+        vec3 lightColor = colorLinear(lightPointArray[i].color.rgb);
+        float distanceL = length(lightPointArray[i].position - worldPos);
         float attenuation = 1.0 / (distanceL * distanceL);
 
         // BRDF terms
-        float NdotL = dot(N, L);
-        float NdotV = dot(N, V);
+        float NdotL = saturate(dot(N, L));
+        float NdotV = saturate(dot(N, V));
 
         if(NdotL > 0)
         {
@@ -81,7 +85,7 @@ void main()
             // Fresnel (Schlick) computation (F term)
             // F0 = 0.04 --> dielectric UE4
             // F0 = 0.658 --> Glass
-            vec3 F = FresnelSchlick(max(dot(N, V), 0.0), materialF0);
+            vec3 F = FresnelSchlick(max(NdotV, 0.0), materialF0);
 
             // Distribution (GGX) computation (D term)
             float D = DistributionGGX(N, H, materialRoughness);
@@ -96,6 +100,10 @@ void main()
             diffuse *= attenuation;
             specular *= attenuation;
 
+            // Clamp color components between 0.0f and 1.0f
+            diffuse = saturate(diffuse);
+            specular = saturate(specular);
+
             // SSAO
             vec3 ssao = vec3(ssaoVisibility * ao);
 
@@ -105,17 +113,22 @@ void main()
     }
 
     // Switching between the different buffers
+    // Final buffer
     if(gBufferView == 1)
     {
-        color = pow(color, vec3(1.0/2.2));
+        color = colorSRGB(color);
         colorOutput = vec4(color, 1.0);
     }
+    // Position buffer
     else if (gBufferView == 2)
         colorOutput = vec4(worldPos, 1.0f);
+    // Normals buffer
     else if (gBufferView == 3)
         colorOutput = vec4(normal, 1.0f);
+    // Depth buffer
     else if (gBufferView == 4)
         colorOutput = vec4(vec3(depth/50.0f), 1.0f);
+    // AO buffer
     else if (gBufferView == 5)
         colorOutput = vec4(vec3(ao), 1.0f);
 }
@@ -175,7 +188,7 @@ vec3 colorLinear(vec3 colorVector)
 {
   vec3 linearColor = pow(colorVector.rgb, vec3(2.2f));
 
-  return vec3(linearColor);
+  return linearColor;
 }
 
 
@@ -183,5 +196,23 @@ vec3 colorSRGB(vec3 colorVector)
 {
   vec3 srgbColor = pow(colorVector.rgb, vec3(1.0f / 2.2f));
 
-  return vec3(srgbColor);
+  return srgbColor;
+}
+
+
+float saturate(float f)
+{
+    return clamp(f, 0.0, 1.0);
+}
+
+
+vec2 saturate(vec2 vec)
+{
+    return clamp(vec, 0.0, 1.0);
+}
+
+
+vec3 saturate(vec3 vec)
+{
+    return clamp(vec, 0.0, 1.0);
 }
