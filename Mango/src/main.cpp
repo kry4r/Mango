@@ -1,7 +1,7 @@
 #include "shader.h"
 #include "camera.h"
 #include "model.h"
-#include "basicshape.h"
+#include "shapeobject.h"
 #include "textureobject.h"
 #include "lightobject.h"
 #include "cubemap.h"
@@ -42,15 +42,14 @@ void gBufferSetup();
 void ssaoSetup();
 void gBufferQuad();
 
-
 GLfloat lerp(GLfloat x, GLfloat y, GLfloat a);
 
 // Variables & objects declarations
-const GLuint WIDTH = 1920;
-const GLuint HEIGHT = 1080;
+GLuint WIDTH = 1280;
+GLuint HEIGHT = 720;
 
 GLuint gBufferQuadVAO, gBufferQuadVBO;
-GLuint gBuffer, zBuffer, gPosition, gNormal, gColor;
+GLuint gBuffer, zBuffer, gPosition, gNormal, gAlbedo, gRoughness, gMetalness;
 GLuint ssaoFBO, ssaoBlurFBO, ssaoBuffer, ssaoBlurBuffer, noiseTexture;
 
 GLint gBufferView = 1;
@@ -74,32 +73,27 @@ GLfloat ssaoRadius = 1.0f;
 GLfloat ssaoVisibility = 1;
 GLfloat ssaoPower = 1.0f;
 
+bool screenMode = false;
 bool cameraMode;
 bool firstMouse = true;
 bool guiIsOpen = true;
-
 bool keys[1024];
 
 glm::vec3 albedoColor = glm::vec3(1.0f);
-glm::vec3 materialF0 = glm::vec3(0.658f);
+glm::vec3 materialF0 = glm::vec3(0.56f, 0.57f, 0.58f);
 glm::vec3 lightPointPosition1 = glm::vec3(1.5f, 0.75f, 1.0f);
 glm::vec3 lightPointPosition2 = glm::vec3(-1.5f, 1.0f, 1.0f);
 glm::vec3 lightPointPosition3 = glm::vec3(0.0f, 0.75f, -1.2f);
-glm::vec3 lightPointColor1 = glm::vec3(1.0f, 0.0f, 0.0f);
-glm::vec3 lightPointColor2 = glm::vec3(0.0f, 1.0f, 0.0f);
-glm::vec3 lightPointColor3 = glm::vec3(0.0f, 0.0f, 1.0f);
+glm::vec3 lightPointColor1 = glm::vec3(1.0f);
+glm::vec3 lightPointColor2 = glm::vec3(1.0f);
+glm::vec3 lightPointColor3 = glm::vec3(1.0f);
 glm::vec3 lightDirectionalColor1 = glm::vec3(1.0f);
-
 
 vector<const char*> cubeFaces;
 std::vector<glm::vec3> ssaoKernel;
 std::vector<glm::vec3> ssaoNoise;
 
-
-
-
 Camera camera(glm::vec3(0.0f, 0.0f, 4.0f));
-
 int main(int argc, char* argv[])
 {
     glfwInit();
@@ -129,18 +123,26 @@ int main(int argc, char* argv[])
     glfwSetScrollCallback(window, scroll_callback);
 
     // Model
-    Model shaderballModel("resource/model/shaderball/shaderball.obj");
+    Model shaderballModel("resource/model/sphere/sphere.obj");
 
+    // Texture
+    TextureObject ironAlbedo("resource/textures/pbr/rustediron/rustediron_albedo.png", "texAlbedo");
+    TextureObject ironNormal("resource/textures/pbr/rustediron/rustediron_normal.png", "texNormal");
+    TextureObject ironRoughness("resource/textures/pbr/rustediron/rustediron_roughness.png", "texRoughness");
+    TextureObject ironMetalness("resource/textures/pbr/rustediron/rustediron_metalness.png", "texMetalness");
 
     // Shader
-    MyShader lightShader("resource/shaders/lighting/light.vert", "resource/shaders/lighting/light.frag");
+
     MyShader gBufferShader("resource/shaders/gbuffer.vert", "resource/shaders/gbuffer.frag");
+    MyShader velocityShader("resource/shaders/velocity.vert", "resource/shaders/velocity.frag");
+
+    MyShader lightShader("resource/shaders/lighting/light.vert", "resource/shaders/lighting/light.frag");
     MyShader pointBRDFShader("resource/shaders/lighting/pointbrdf.vert", "resource/shaders/lighting/pointbrdf.frag");
     MyShader directionalBRDFShader("resource/shaders/lighting/directionalbrdf.vert", "resource/shaders/lighting/directionalbrdf.frag");
     MyShader cubemapShader("resource/shaders/lighting/cubemap.vert", "resource/shaders/lighting/cubemap.frag");
+
     MyShader ssaoShader("resource/shaders/postprocess/ssao.vert", "resource/shaders/postprocess/ssao.frag");
     MyShader ssaoBlurShader("resource/shaders/postprocess/ssao.vert", "resource/shaders/postprocess/ssaoblur.frag");
-    MyShader velocityShader("resource/shaders/velocity.vert", "resource/shaders/velocity.frag");
 
     // Basic shape
     
@@ -151,7 +153,7 @@ int main(int argc, char* argv[])
     LightObject lightPoint2(lightPointPosition2, glm::vec4(lightPointColor2, 1.0f), true);
     LightObject lightPoint3(lightPointPosition3, glm::vec4(lightPointColor3, 1.0f), true);
 
-    LightObject lightDirectional1(glm::vec3(-0.2f, -1.0f, -0.3f), glm::vec4(lightPointColor1, 1.0f));
+    LightObject lightDirectional1(glm::vec3(-0.2f, -1.0f, -0.3f), glm::vec4(lightDirectionalColor1, 1.0f));
 
 
     //Cubemap
@@ -170,14 +172,18 @@ int main(int argc, char* argv[])
     pointBRDFShader.Use();
     glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gPosition"), 0);
     glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gNormal"), 1);
-    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gColor"), 2);
-    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "ssao"), 3);
+    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gAlbedo"), 2);
+    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gRoughness"), 3);
+    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gMetalness"), 4);
+    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "ssao"), 5);
 
     directionalBRDFShader.Use();
     glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gPosition"), 0);
     glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gNormal"), 1);
-    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gColor"), 2);
-    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "ssao"), 3);
+    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gAlbedo"), 2);
+    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gRoughness"), 3);
+    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gMetalness"), 4);
+    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "ssao"), 5);
 
     ssaoShader.Use();
     glUniform1i(glGetUniformLocation(ssaoShader.Program, "gPosition"), 0);
@@ -188,8 +194,12 @@ int main(int argc, char* argv[])
     // --------------------------------------------------------------
     // G-Buffer setup
     gBufferSetup();
+
+
     // SSAO setup
     ssaoSetup();
+
+
     // Post-processing setup
     glm::mat4 prevProjection;
     glm::mat4 prevView;
@@ -245,20 +255,33 @@ int main(int argc, char* argv[])
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 model;
 
-        gBufferShader.Use();
 
         // Model rendering
+        gBufferShader.Use();
+
+        
         glUniformMatrix4fv(glGetUniformLocation(gBufferShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glUniformMatrix4fv(glGetUniformLocation(gBufferShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+
+        GLfloat rotationAngle = glfwGetTime() / 5.0f * 5.0f;
         model = glm::mat4();
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-        GLfloat angle = glfwGetTime() / 5.0f * 5.0f;
-        model = glm::rotate(model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::translate(model, glm::vec3(0.0f));
+        model = glm::rotate(model, rotationAngle, glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
         glUniformMatrix4fv(glGetUniformLocation(gBufferShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(glGetUniformLocation(gBufferShader.Program, "modelViewProj"), 1, GL_FALSE, glm::value_ptr(model * view * projection));
         glUniformMatrix4fv(glGetUniformLocation(gBufferShader.Program, "prevModelViewProj"), 1, GL_FALSE, glm::value_ptr(prevModel * prevView * prevProjection));
         glUniform3f(glGetUniformLocation(gBufferShader.Program, "albedoColor"), albedoColor.r, albedoColor.g, albedoColor.b);
+
+        glActiveTexture(GL_TEXTURE0);
+        ironAlbedo.Bind();
+        glUniform1i(glGetUniformLocation(gBufferShader.Program, "texAlbedo"), 0);
+        glActiveTexture(GL_TEXTURE1);
+        ironRoughness.Bind();
+        glUniform1i(glGetUniformLocation(gBufferShader.Program, "texRoughness"), 1);
+        glActiveTexture(GL_TEXTURE2);
+        ironMetalness.Bind();
+        glUniform1i(glGetUniformLocation(gBufferShader.Program, "texMetalness"), 2);
 
         shaderballModel.Draw(gBufferShader);
 
@@ -272,6 +295,7 @@ int main(int argc, char* argv[])
 
         // SSAO texture
         ssaoShader.Use();
+
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gPosition);
         glActiveTexture(GL_TEXTURE1);
@@ -280,7 +304,8 @@ int main(int argc, char* argv[])
         glBindTexture(GL_TEXTURE_2D, noiseTexture);
 
         for (GLuint i = 0; i < ssaoKernelSize; ++i)
-        glUniform3fv(glGetUniformLocation(ssaoShader.Program, ("samples[" + std::to_string(i) + "]").c_str()), 1, &ssaoKernel[i][0]);
+            glUniform3fv(glGetUniformLocation(ssaoShader.Program, ("samples[" + std::to_string(i) + "]").c_str()), 1, &ssaoKernel[i][0]);
+
         glUniformMatrix4fv(glGetUniformLocation(ssaoShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glUniform1i(glGetUniformLocation(ssaoShader.Program, "ssaoKernelSize"), ssaoKernelSize);
         glUniform1i(glGetUniformLocation(ssaoShader.Program, "ssaoNoiseSize"), ssaoNoiseSize);
@@ -288,6 +313,7 @@ int main(int argc, char* argv[])
         glUniform1f(glGetUniformLocation(ssaoShader.Program, "ssaoPower"), ssaoPower);
         glUniform1i(glGetUniformLocation(ssaoShader.Program, "viewportWidth"), WIDTH);
         glUniform1i(glGetUniformLocation(ssaoShader.Program, "viewportHeight"), HEIGHT);
+
         gBufferQuad();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -296,25 +322,34 @@ int main(int argc, char* argv[])
         glClear(GL_COLOR_BUFFER_BIT);
 
         ssaoBlurShader.Use();
+
         glUniform1i(glGetUniformLocation(ssaoBlurShader.Program, "ssaoBlurSize"), ssaoBlurSize);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, ssaoBuffer);
+
         gBufferQuad();
+
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glQueryCounter(queryIDSSAO[1], GL_TIMESTAMP);
+
 
         // Light Pass rendering
         glQueryCounter(queryIDLighting[0], GL_TIMESTAMP);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         pointBRDFShader.Use();
+
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gPosition);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, gNormal);
         glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, gColor);
+        glBindTexture(GL_TEXTURE_2D, gAlbedo);
         glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, gRoughness);
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, gMetalness);
+        glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);
 
         // Lights rendering
@@ -338,7 +373,7 @@ int main(int argc, char* argv[])
         glUniform3f(glGetUniformLocation(pointBRDFShader.Program, "materialF0"), materialF0.r, materialF0.g, materialF0.b);
         glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gBufferView"), gBufferView);
         glUniform1f(glGetUniformLocation(pointBRDFShader.Program, "ssaoVisibility"), ssaoVisibility);
-        glQueryCounter(queryIDLighting[1], GL_TIMESTAMP);
+
 
 
         //directionalBRDFShader.Use();
@@ -370,6 +405,8 @@ int main(int argc, char* argv[])
         //glUniform3f(glGetUniformLocation(directionalBRDFShader.Program, "materialF0"), materialF0.r, materialF0.g, materialF0.b);
         //glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gBufferView"), gBufferView);
         //glUniform1f(glGetUniformLocation(directionalBRDFShader.Program, "ssaoVisibility"), ssaoVisibility);
+        glQueryCounter(queryIDLighting[1], GL_TIMESTAMP);
+
 
         // G-Buffer quad target
         gBufferQuad();
@@ -390,6 +427,7 @@ int main(int argc, char* argv[])
         lightShader.Use();
         glUniformMatrix4fv(glGetUniformLocation(lightShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glUniformMatrix4fv(glGetUniformLocation(lightShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+
         for (int i = 0; i < LightObject::lightPointList.size(); i++)
         {
             glUniform4f(glGetUniformLocation(lightShader.Program, "lightColor"), LightObject::lightPointList[i].getLightColor().r, LightObject::lightPointList[i].getLightColor().g, LightObject::lightPointList[i].getLightColor().b, LightObject::lightPointList[i].getLightColor().a);
@@ -398,6 +436,7 @@ int main(int argc, char* argv[])
                 LightObject::lightPointList[i].lightMesh.drawShape(lightShader, view, projection, camera);
         }
         glQueryCounter(queryIDForward[1], GL_TIMESTAMP);
+
 
         // Cubemap rendering
         glQueryCounter(queryIDCubemap[0], GL_TIMESTAMP);
@@ -413,7 +452,7 @@ int main(int argc, char* argv[])
 
 
         // GPU profiling
-        GLint stopGeometryTimerAvailable = 0;
+         GLint stopGeometryTimerAvailable = 0;
         GLint stopLightingTimerAvailable = 0;
         GLint stopForwardTimerAvailable = 0;
         GLint stopSSAOTimerAvailable = 0;
@@ -478,9 +517,9 @@ void imGuiSetup()
 {
     ImGui_ImplGlfwGL3_NewFrame();
 
-    ImGui::Begin("About Mango Engine", &guiIsOpen, ImVec2(0, 0), 0.5f, ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoSavedSettings);
-    //ImGui::SetWindowPos(ImVec2(10, 10));
-    //ImGui::SetWindowSize(ImVec2(420, HEIGHT - 20));
+    ImGui::Begin("GLEngine", &guiIsOpen, ImVec2(0, 0), 0.5f, ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoSavedSettings);
+    //    ImGui::SetWindowPos(ImVec2(10, 10));
+    //    ImGui::SetWindowSize(ImVec2(420, HEIGHT - 20));
 
     if (ImGui::CollapsingHeader("Rendering options", 0, true, true))
     {
@@ -488,7 +527,7 @@ void imGuiSetup()
         {
             ImGui::ColorEdit3("Albedo", (float*)&albedoColor);
             ImGui::SliderFloat("Roughness", &materialRoughness, 0.0f, 1.0f);
-            ImGui::SliderFloat("Metallicity", &materialMetallicity, 0.0f, 1.0f);
+            ImGui::SliderFloat("Metalness", &materialMetallicity, 0.0f, 1.0f);
             ImGui::SliderFloat3("F0", (float*)&materialF0, 0.0f, 1.0f);
 
             ImGui::TreePop();
@@ -555,11 +594,12 @@ void imGuiSetup()
 
     if (ImGui::CollapsingHeader("About", 0, true, true))
     {
-        ImGui::Text("Mango Engine Created by Nidhogg\n\nEmail: Nidhogxt@outlook.com");
+        ImGui::Text("GLEngine by Joshua Senouf\n\nEmail: joshua.senouf@gmail.com\nTwitter: @JoshuaSenouf");
     }
 
     ImGui::End();
 }
+
 
 // gBufferSetup函数用于设置G缓冲区，包括创建帧缓冲对象和绑定纹理附件。
 /**
@@ -568,22 +608,23 @@ void imGuiSetup()
  * 定义G缓冲区的颜色附件，创建并附加深度缓冲区，
  * 检查帧缓冲区是否完整。
  */
+
 void gBufferSetup()
 {
     glGenFramebuffers(1, &gBuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 
-    // 位置纹理
+    // Position
     glGenTextures(1, &gPosition);
     glBindTexture(GL_TEXTURE_2D, gPosition);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
 
-    // 法线纹理
+    // Normals
     glGenTextures(1, &gNormal);
     glBindTexture(GL_TEXTURE_2D, gNormal);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
@@ -592,16 +633,33 @@ void gBufferSetup()
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
 
     // Albedo
-    glGenTextures(1, &gColor);
-    glBindTexture(GL_TEXTURE_2D, gColor);
+    glGenTextures(1, &gAlbedo);
+    glBindTexture(GL_TEXTURE_2D, gAlbedo);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gColor, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedo, 0);
 
-    // 定义GBuffer的颜色附件
-    GLuint attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-    glDrawBuffers(3, attachments);
+    // Roughness
+    glGenTextures(1, &gRoughness);
+    glBindTexture(GL_TEXTURE_2D, gRoughness);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gRoughness, 0);
+
+    // Metalness
+    glGenTextures(1, &gMetalness);
+    glBindTexture(GL_TEXTURE_2D, gMetalness);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, gMetalness, 0);
+
+
+    // Define the COLOR_ATTACHMENTS for the G-Buffer
+    GLuint attachments[5] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+    glDrawBuffers(5, attachments);
 
     // Z-Buffer
     glGenRenderbuffers(1, &zBuffer);
@@ -609,10 +667,11 @@ void gBufferSetup()
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WIDTH, HEIGHT);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, zBuffer);
 
-    // 检查frame buffer是否完整
+    // Check if the framebuffer is complete before continuing
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "Framebuffer not complete !" << std::endl;
 }
+
 
 // 设置SSAO相关参数
 /**
@@ -621,6 +680,8 @@ void gBufferSetup()
  * 生成Kernel进行采样
  * 生成噪声纹理
  */
+
+
 void ssaoSetup()
 {
     // SSAO Buffer
@@ -685,6 +746,7 @@ void ssaoSetup()
  * quadVertices数组，用于存储四边形的顶点数据
  * 之后进行数据设置，绑定VAO与VBO，将顶点数据复制到缓冲区中，
  */
+
 void gBufferQuad()
 {
     if (gBufferQuadVAO == 0)
@@ -712,7 +774,6 @@ void gBufferQuad()
     glBindVertexArray(0);
 }
 
-
 GLfloat lerp(GLfloat x, GLfloat y, GLfloat a)
 {
     return x + a * (y - x);
@@ -735,11 +796,41 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
 
-    //if (key == GLFW_KEY_F11 && action == GLFW_PRESS)
-        //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    if (key == GLFW_KEY_F11 && action == GLFW_PRESS)
+    {
+        screenMode = !screenMode;
 
-    //if (key == GLFW_KEY_F12 && action == GLFW_PRESS)
-        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        //        GLFWwindow* newWindow = glfwCreateWindow(WIDTH, HEIGHT, "GLEngine", screenMode ? glfwGetPrimaryMonitor() : nullptr, window);
+        //        GLFWwindow* newWindow = glfwCreateWindow(WIDTH, HEIGHT, "GLEngine", glfwGetPrimaryMonitor(), window);
+        //        glfwDestroyWindow(window);
+        //        GLFWwindow* window = newWindow;
+
+        //        glfwMakeContextCurrent(window);
+    }
+
+    if (keys[GLFW_KEY_1])
+        gBufferView = 1;
+
+    if (keys[GLFW_KEY_2])
+        gBufferView = 2;
+
+    if (keys[GLFW_KEY_3])
+        gBufferView = 3;
+
+    if (keys[GLFW_KEY_4])
+        gBufferView = 4;
+
+    if (keys[GLFW_KEY_5])
+        gBufferView = 5;
+
+    if (keys[GLFW_KEY_6])
+        gBufferView = 6;
+
+    if (keys[GLFW_KEY_7])
+        gBufferView = 7;
+
+    if (keys[GLFW_KEY_8])
+        gBufferView = 8;
 
     if (key >= 0 && key < 1024)
     {

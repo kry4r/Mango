@@ -32,7 +32,8 @@ public:
         this->loadModel(path);
     }
 
-    void Draw(MyShader shader)
+
+    void Draw(MyShader& shader)
     {
         for (GLuint i = 0; i < this->meshes.size(); i++)
             this->meshes[i].Draw(shader);
@@ -120,9 +121,6 @@ private:
         if (mesh->mMaterialIndex >= 0)
         {
             aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-            // We assume a convention for sampler names in the shaders. Each diffuse texture should be named
-            // as 'texture_diffuseN' where N is a sequential number ranging from 1 to MAX_SAMPLER_NUMBER.
-            // Same applies to other texture as the following list summarizes:
             // Diffuse: texture_diffuseN
             // Specular: texture_specularN
             // Normal: texture_normalN

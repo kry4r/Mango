@@ -14,7 +14,9 @@ float PI  = 3.14159265359f;
 // G-Buffer
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
-uniform sampler2D gColor;
+uniform sampler2D gAlbedo;
+uniform sampler2D gRoughness;
+uniform sampler2D gMetalness;
 uniform sampler2D ssao;
 
 // Light source(s) informations
@@ -48,7 +50,9 @@ void main()
     // Retrieve G-Buffer informations
     vec3 worldPos = texture(gPosition, TexCoords).rgb;
     vec3 normal = texture(gNormal, TexCoords).rgb;
-    vec3 albedo = colorLinear(texture(gColor, TexCoords).rgb);
+    vec3 albedo = colorLinear(texture(gAlbedo, TexCoords).rgb);
+    float roughness = texture(gRoughness, TexCoords).r;
+    float metalness = texture(gMetalness, TexCoords).r;
     float ao = texture(ssao, TexCoords).r;
     float depth = texture(gPosition, TexCoords).a;
 
@@ -77,21 +81,22 @@ void main()
         if(NdotL > 0)
         {
             // Lambertian computation
-            diffuse = (albedo/PI) - (albedo/PI) * materialMetallicity;
+            // diffuse = albedo/PI - (albedo/PI) * metalness;
+            diffuse = albedo/PI;
 
             // Disney diffuse term
-            float kDisney = KDisneyTerm(NdotL, NdotV, materialRoughness);
+            float kDisney = KDisneyTerm(NdotL, NdotV, roughness);
 
             // Fresnel (Schlick) computation (F term)
             // F0 = 0.04 --> dielectric UE4
-            // F0 = 0.658 --> Glass
-            vec3 F = FresnelSchlick(max(NdotV, 0.0), materialF0);
+            vec3 F0 = mix(materialF0, diffuse, metalness);
+            vec3 F = FresnelSchlick(max(NdotV, 0.0), F0, roughness);
 
             // Distribution (GGX) computation (D term)
-            float D = DistributionGGX(N, H, materialRoughness);
+            float D = DistributionGGX(N, H, roughness);
 
             // Geometry attenuation (GGX-Smith) computation (G term)
-            float G = GeometryAttenuationGGXSmith(NdotL, NdotV, materialRoughness);
+            float G = GeometryAttenuationGGXSmith(NdotL, NdotV, roughness);
 
             // Specular component computation
             specular = (F * D * G) / (4 * NdotL * NdotV);
@@ -122,14 +127,29 @@ void main()
     // Position buffer
     else if (gBufferView == 2)
         colorOutput = vec4(worldPos, 1.0f);
-    // Normals buffer
+
+    // World Normal buffer
     else if (gBufferView == 3)
         colorOutput = vec4(normal, 1.0f);
-    // Depth buffer
+
+    // Color buffer
     else if (gBufferView == 4)
-        colorOutput = vec4(vec3(depth/50.0f), 1.0f);
-    // AO buffer
+        colorOutput = vec4(albedo, 1.0f);
+
+    // Roughness buffer
     else if (gBufferView == 5)
+        colorOutput = vec4(vec3(roughness), 1.0f);
+
+    // Metalness buffer
+    else if (gBufferView == 6)
+        colorOutput = vec4(vec3(metalness), 1.0f);
+
+    // Depth buffer
+    else if (gBufferView == 7)
+        colorOutput = vec4(vec3(depth/50.0f), 1.0f);
+
+    // AO buffer
+    else if (gBufferView == 8)
         colorOutput = vec4(vec3(ao), 1.0f);
 }
 

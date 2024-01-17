@@ -8,13 +8,14 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <vector>
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <vector>
 #include <stb_image.h>
+#include <vector>
 
 
 GLfloat cubemapVertices[] = {
@@ -104,7 +105,7 @@ public:
             if (image == NULL)
                 std::cerr << "FAILED LOADING CUBEMAP : " << cubemapFaces[i] << std::endl;
 
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_SRGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 
             stbi_image_free(image);
         }
@@ -119,7 +120,7 @@ public:
     }
 
 
-    void renderToShader(MyShader shaderCubemap, MyShader shaderLighting, glm::mat4 projection, Camera camera)
+    void renderToShader(MyShader& shaderCubemap, MyShader& shaderLighting, glm::mat4& projection, Camera& camera)
     {
         glDepthFunc(GL_LEQUAL);
         shaderCubemap.Use();
@@ -139,6 +140,5 @@ public:
         glBindVertexArray(0);
         glDepthFunc(GL_LESS);
     }
-
 };
 #endif //MANGO_CUBEMAP_H

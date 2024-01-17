@@ -32,7 +32,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\headers\basicshape.h">
+    <ClInclude Include="src\headers\shapeobject.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\headers\camera.h">
@@ -57,6 +57,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\headers\imconfig.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\headers\materialobject.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

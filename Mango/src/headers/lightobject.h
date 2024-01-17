@@ -5,16 +5,17 @@
 #ifndef MANGO_LIGHTOBJECT_H
 #define MANGO_LIGHTOBJECT_H
 #include <string>
-#include <vector>
 #include <fstream>
-#include <iostream>
 #include <sstream>
-#include "basicshape.h"
+#include <iostream>
+#include <vector>
 
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
-#include "glad/glad.h"
+#include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include "shapeobject.h"
 
 
 
@@ -29,13 +30,14 @@ public:
 
     std::string lightType;
 
-    bool lightToMesh;
+    bool lightToMesh = false;
 
     glm::vec3 lightPosition;
     glm::vec3 lightDirection;
     glm::vec4 lightColor;
 
-    BasicShape lightMesh = BasicShape("cube", glm::vec3(0.0f, 0.0f, 0.0f));
+    ShapeObject lightMesh = ShapeObject("cube", glm::vec3(0.0f, 0.0f, 0.0f));
+
 
     LightObject(glm::vec3 position, glm::vec4 color, bool isMesh)
     {
@@ -50,11 +52,11 @@ public:
             this->lightMesh.setShapePosition(this->lightPosition);
             this->lightMesh.setShapeScale(glm::vec3(0.15f, 0.15f, 0.15f));
         }
-        
 
         lightPointCount = ++lightPointCount;
         lightPointList.push_back(*this);
     }
+
 
     LightObject(glm::vec3 direction, glm::vec4 color)
     {
@@ -95,15 +97,16 @@ public:
         return lightType;
     }
 
-    glm::vec3 getLightDirection()
-    {
-        return lightDirection;
-    }
-
 
     glm::vec3 getLightPosition()
     {
         return lightPosition;
+    }
+
+
+    glm::vec3 getLightDirection()
+    {
+        return lightDirection;
     }
 
 

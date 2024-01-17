@@ -37,7 +37,7 @@ public:
     vector<GLuint> indices;
     vector<Texture> textures;
 
-    Mesh(vector<Vertex> vertices, vector<GLuint> indices, vector<Texture> textures)
+    Mesh(vector<Vertex>& vertices, vector<GLuint>& indices, vector<Texture>& textures)
     {
         this->vertices = vertices;
         this->indices = indices;
@@ -46,7 +46,8 @@ public:
         this->setupMesh();
     }
 
-    void Draw(MyShader shader)
+
+    void Draw(MyShader& shader)
     {
         GLuint diffuseNr = 1;
         GLuint specularNr = 1;

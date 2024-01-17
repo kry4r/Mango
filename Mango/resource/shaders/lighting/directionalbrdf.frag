@@ -14,7 +14,9 @@ float PI  = 3.14159265359f;
 // G-Buffer
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
-uniform sampler2D gColor;
+uniform sampler2D gAlbedo;
+uniform sampler2D gRoughness;
+uniform sampler2D gMetalness;
 uniform sampler2D ssao;
 
 // Light source(s) informations
@@ -41,13 +43,14 @@ float saturate(float f);
 vec2 saturate(vec2 vec);
 vec3 saturate(vec3 vec);
 
-
 void main()
 {
     // 获取G-Buffer信息
     vec3 worldPos = texture(gPosition, TexCoords).rgb; // 世界坐标
     vec3 normal = texture(gNormal, TexCoords).rgb; // 法线
-    vec3 albedo = colorLinear(texture(gColor, TexCoords).rgb); // 反射率
+    vec3 albedo = colorLinear(texture(gAlbedo, TexCoords).rgb);
+    float roughness = texture(gRoughness, TexCoords).r;
+    float metalness = texture(gMetalness, TexCoords).r;
     float ao = texture(ssao, TexCoords).r; // 环境光遮蔽
     float depth = texture(gPosition, TexCoords).a; // 深度
 
@@ -58,48 +61,50 @@ void main()
     vec3 color = vec3(0.0f); // 最终颜色
     vec3 diffuse = vec3(0.0f); // 漫反射颜色
     vec3 specular = vec3(0.0f); // 镜面反射颜色
+    //vec3 envMap = texture(cubemap, R).rgb;
 
     for (int i = 0; i < lightDirectionalCounter; i++)
     {
-        vec3 L = normalize(- lightDirectionalArray[i].direction); // 光源方向
-        vec3 H = normalize(L + V); // 半程向量
+        vec3 L = normalize(- lightDirectionalArray[i].direction);
+        vec3 H = normalize(L + V);
 
-        vec3 lightColor = colorLinear(lightDirectionalArray[i].color.rgb); // 光源颜色
+        vec3 lightColor = colorLinear(lightDirectionalArray[i].color.rgb);
 
-        // BRDF项计算
-        float NdotL = dot(N, L); // 法线和光线方向的点积
-        float NdotV = dot(N, V); // 法线和视点方向的点积
+        // BRDF terms
+        float NdotL = dot(N, L);
+        float NdotV = dot(N, V);
 
         if(NdotL > 0)
         {
-            // Lambertian计算
-            diffuse = (albedo/PI) - (albedo/PI) * materialMetallicity;
+            // Lambertian computation
+            // diffuse = albedo/PI - (albedo/PI) * metalness;
+            diffuse = (albedo/PI);
 
-            // Disney漫反射项
-            float kDisney = KDisneyTerm(NdotL, NdotV, materialRoughness);
+            // Disney diffuse term
+            float kDisney = KDisneyTerm(NdotL, NdotV, roughness);
 
-            // Fresnel (Schlick)计算 (F项)
-            // F0 = 0.04 --> 电介质 UE4
-            // F0 = 0.658 --> 玻璃
-            vec3 F = FresnelSchlick(max(NdotV, 0.0), materialF0);
+            // Fresnel (Schlick) computation (F term)
+            // F0 = 0.04 --> dielectric UE4
+            vec3 F0 = mix(materialF0, diffuse, metalness);
+            vec3 F = FresnelSchlick(max(NdotV, 0.0), F0, roughness);
 
-            // Distribution (GGX)计算 (D项)
-            float D = DistributionGGX(N, H, materialRoughness);
+            // Distribution (GGX) computation (D term)
+            float D = DistributionGGX(N, H, roughness);
 
-            // Geometry attenuation (GGX-Smith)计算 (G项)
-            float G = GeometryAttenuationGGXSmith(NdotL, NdotV, materialRoughness);
+            // Geometry attenuation (GGX-Smith) computation (G term)
+            float G = GeometryAttenuationGGXSmith(NdotL, NdotV, roughness);
 
-            // 镜面反射项计算
+            // Specular component computation
             specular = (F * D * G) / (4 * NdotL * NdotV);
 
-            // 将颜色分量限制在0.0到1.0之间
+            // Clamp color components between 0.0f and 1.0f
             diffuse = saturate(diffuse);
             specular = saturate(specular);
 
             // SSAO
             vec3 ssao = vec3(ssaoVisibility * ao);
 
-            // 计算最终颜色
+
             color += ssao * lightColor * NdotL * (diffuse * kDisney * (1.0f - specular) + specular);
         }
     }
@@ -110,17 +115,32 @@ void main()
         color = colorSRGB(color);
         colorOutput = vec4(color, 1.0);
     }
-    // Position
+    // Position buffer
     else if (gBufferView == 2)
         colorOutput = vec4(worldPos, 1.0f);
-    // Normal
+
+    // World Normal buffer
     else if (gBufferView == 3)
         colorOutput = vec4(normal, 1.0f);
-    // Depth
+
+    // Color buffer
     else if (gBufferView == 4)
-        colorOutput = vec4(vec3(depth/50.0f), 1.0f);
-    // SSAO
+        colorOutput = vec4(albedo, 1.0f);
+
+    // Roughness buffer
     else if (gBufferView == 5)
+        colorOutput = vec4(vec3(roughness), 1.0f);
+
+    // Metalness buffer
+    else if (gBufferView == 6)
+        colorOutput = vec4(vec3(metalness), 1.0f);
+
+    // Depth buffer
+    else if (gBufferView == 7)
+        colorOutput = vec4(vec3(depth/50.0f), 1.0f);
+
+    // AO buffer
+    else if (gBufferView == 8)
         colorOutput = vec4(vec3(ao), 1.0f);
 }
 
@@ -191,6 +211,7 @@ vec3 colorSRGB(vec3 colorVector)
 
   return srgbColor;
 }
+
 
 float saturate(float f)
 {

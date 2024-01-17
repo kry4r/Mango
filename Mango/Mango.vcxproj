@@ -140,7 +140,8 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\headers\basicshape.h" />
+    <ClInclude Include="src\headers\materialobject.h" />
+    <ClInclude Include="src\headers\shapeobject.h" />
     <ClInclude Include="src\headers\camera.h" />
     <ClInclude Include="src\headers\cubemap.h" />
     <ClInclude Include="src\headers\imconfig.h" />

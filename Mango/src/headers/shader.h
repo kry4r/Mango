@@ -14,7 +14,9 @@
 class MyShader
 {
 public:
-    unsigned int Program;
+    GLuint Program;
+
+
     MyShader(const GLchar* vertexPath, const GLchar* fragmentPath)
     {
         // Shaders reading
@@ -47,7 +49,7 @@ public:
         }
 
         const GLchar* vShaderCode = vertexCode.c_str();
-        const GLchar * fShaderCode = fragmentCode.c_str();
+        const GLchar* fShaderCode = fragmentCode.c_str();
 
         // Shaders compilation
         GLuint vertex, fragment;
@@ -79,20 +81,22 @@ public:
         }
 
         // Shader Program
-        Program = glCreateProgram();
-        glAttachShader(Program, vertex);
-        glAttachShader(Program, fragment);
-        glLinkProgram(Program);
-        glGetShaderiv(Program, GL_COMPILE_STATUS, &success);
+        this->Program = glCreateProgram();
+        glAttachShader(this->Program, vertex);
+        glAttachShader(this->Program, fragment);
+        glLinkProgram(this->Program);
+        glGetProgramiv(this->Program, GL_LINK_STATUS, &success);
+
         if (!success)
         {
-            glGetProgramInfoLog(Program, 1024, NULL, infoLog);
-            std::cout << "ERROR::PROGRAM_LINKING_ERROR of type: " <<"\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+            glGetProgramInfoLog(this->Program, 512, NULL, infoLog);
+            std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
         }
 
         glDeleteShader(vertex);
         glDeleteShader(fragment);
     }
+
 
     // Uses the current shader
     void Use()

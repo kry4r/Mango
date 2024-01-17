@@ -43,9 +43,9 @@ public:
     GLfloat cameraFOV;
 
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), GLfloat yaw = defaultCameraYaw, GLfloat pitch = defaultCameraPitch) : cameraFront(glm::vec3(0.0f, 0.0f, -1.0f)),
-                                                                                                                                                                               cameraSpeed(defaultCameraSpeed),
-                                                                                                                                                                               cameraSensitivity(defaultCameraSensitivity),
-                                                                                                                                                                               cameraFOV(defaultCameraFOV)
+        cameraSpeed(defaultCameraSpeed),
+        cameraSensitivity(defaultCameraSensitivity),
+        cameraFOV(defaultCameraFOV)
     {
         this->cameraPosition = position;
         this->worldUp = up;
