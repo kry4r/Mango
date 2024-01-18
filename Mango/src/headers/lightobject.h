@@ -35,17 +35,19 @@ public:
     glm::vec3 lightPosition;
     glm::vec3 lightDirection;
     glm::vec4 lightColor;
+    float lightRadius;
 
     ShapeObject lightMesh = ShapeObject("cube", glm::vec3(0.0f, 0.0f, 0.0f));
 
 
-    LightObject(glm::vec3 position, glm::vec4 color, bool isMesh)
+    LightObject(glm::vec3 position, glm::vec4 color, bool isMesh,float radius)
     {
         this->lightType = "point";
         this->lightPosition = position;
         this->lightColor = color;
         this->lightPointID = lightPointCount;
         this->lightToMesh = isMesh;
+        this->lightRadius = radius;
 
         if (this->lightToMesh)
         {
@@ -80,6 +82,7 @@ public:
 
             glUniform3f(glGetUniformLocation(shader.Program, ("lightPointArray[" + to_string(this->lightPointID) + "].position").c_str()), lightPositionViewSpace.x, lightPositionViewSpace.y, lightPositionViewSpace.z);
             glUniform4f(glGetUniformLocation(shader.Program, ("lightPointArray[" + to_string(this->lightPointID) + "].color").c_str()), this->lightColor.r, this->lightColor.g, this->lightColor.b, this->lightColor.a);
+            glUniform1f(glGetUniformLocation(shader.Program, ("lightPointArray[" + to_string(this->lightPointID) + "].radius").c_str()), this->lightRadius);
         }
 
         else if (this->lightType == "directional")
@@ -150,6 +153,11 @@ public:
         if (this->lightType == "directional")
             lightDirectionalList[this->lightDirectionalID].lightColor = color;
     }
+
+    void setLightRadius(float radius)
+	{
+		lightPointList[this->lightPointID].lightRadius = radius;
+	}
 };
 
 

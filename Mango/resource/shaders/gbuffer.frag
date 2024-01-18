@@ -5,6 +5,7 @@ layout (location = 1) out vec3 gNormal;
 layout (location = 2) out vec3 gAlbedo;
 layout (location = 3) out vec3 gRoughness;
 layout (location = 4) out vec3 gMetalness;
+layout (location = 5) out vec3 gAO;
 
 in vec2 TexCoords;
 in vec3 worldPos;
@@ -15,6 +16,7 @@ uniform sampler2D texAlbedo;
 uniform sampler2D texNormal;
 uniform sampler2D texRoughness;
 uniform sampler2D texMetalness;
+uniform sampler2D texAO;
 
 const float nearPlane = 0.1;
 const float farPlane = 100.0f;
@@ -33,6 +35,7 @@ void main()
     gAlbedo.rgb = vec3(texture(texAlbedo, TexCoords));
     gRoughness.rgb = vec3(texture(texRoughness, TexCoords));
     gMetalness.rgb = vec3(texture(texMetalness, TexCoords));
+    gAO.rgb = vec3(texture(texAO, TexCoords));
 }
 
 

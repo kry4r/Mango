@@ -13,6 +13,8 @@ uniform int ssaoKernelSize;
 uniform int ssaoNoiseSize;
 uniform float ssaoRadius;
 uniform float ssaoPower;
+uniform float ssaoBias;
+
 uniform vec3 samples[128];
 uniform mat4 projection;
 
@@ -23,9 +25,8 @@ void main()
 {
     // Retrieve G-Buffer informations
     vec3 fragPos = texture(gPosition, TexCoords).xyz;
-    vec3 normal = texture(gNormal, TexCoords).rgb;
-    vec3 randomVec = texture(texNoise, TexCoords * noiseScale).xyz;
-
+    vec3 normal = normalize(texture(gNormal, TexCoords).rgb);
+    vec3 randomVec = normalize(texture(texNoise, TexCoords * noiseScale).xyz);
     // TBN : Tangent Space --> View Space
     vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
     vec3 bitangent = cross(normal, tangent);
@@ -50,7 +51,7 @@ void main()
 
         // Check if the sample should be added or not
         float rangeCheck = smoothstep(0.0, 1.0, ssaoRadius / abs(fragPos.z - sampleDepth ));
-        occlusion += (sampleDepth >= sampleAO.z ? 1.0 : 0.0) * rangeCheck;
+        occlusion += (sampleDepth >= sampleAO.z + ssaoBias ? 1.0 : 0.0) * rangeCheck;
     }
     occlusion = 1.0 - (occlusion / ssaoKernelSize);
 
