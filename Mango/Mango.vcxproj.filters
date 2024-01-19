@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\main.cpp">
+    <ClCompile Include="src\Mango.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="3rdparty\glad\src\glad.c">
@@ -30,9 +30,36 @@
     <ClCompile Include="3rdparty\imgui\imgui_impl_glfw_gl3.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="src\camera.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cubemap.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shader.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\light.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shape.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\material.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\texture.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mesh.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\headers\shapeobject.h">
+    <ClInclude Include="src\headers\shape.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\headers\camera.h">
@@ -47,19 +74,19 @@
     <ClInclude Include="src\headers\shader.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\headers\textureobject.h">
+    <ClInclude Include="src\headers\texture.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\headers\cubemap.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\headers\lightobject.h">
+    <ClInclude Include="src\headers\light.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\headers\imconfig.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\headers\materialobject.h">
+    <ClInclude Include="src\headers\material.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

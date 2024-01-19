@@ -1,15 +1,15 @@
+#include <glad/glad.h>
 #include "shader.h"
 #include "camera.h"
 #include "model.h"
-#include "shapeobject.h"
-#include "textureobject.h"
-#include "lightobject.h"
+#include "shape.h"
+#include "texture.h"
+#include "light.h"
 #include "cubemap.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "headers/camera.h"
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <random>
+#include <material.h>
 
 // About GLFW
 static void error_callback(int error, const char* description);
@@ -67,6 +68,7 @@ GLfloat deltaGeometryTime = 0.0f;
 GLfloat deltaLightingTime = 0.0f;
 GLfloat deltaForwardTime = 0.0f;
 GLfloat deltaSSAOTime = 0.0f;
+GLfloat deltaPostprocessTime = 0.0f;
 GLfloat deltaCubemapTime = 0.0f;
 GLfloat deltaGUITime = 0.0f;
 GLfloat materialRoughness = 0.5f;
@@ -77,6 +79,7 @@ GLfloat ssaoVisibility = 1;
 GLfloat ssaoPower = 1.0f;
 GLfloat ssaoBias = 0.025f;
 
+bool fxaaMode = false;
 bool screenMode = false;
 bool cameraMode;
 bool firstMouse = true;
@@ -103,6 +106,34 @@ std::vector<glm::vec3> ssaoKernel;
 std::vector<glm::vec3> ssaoNoise;
 
 Camera camera(glm::vec3(0.0f, 0.0f, 4.0f));
+
+MyShader gBufferShader;
+MyShader velocityShader;
+MyShader lightShader;
+MyShader pointBRDFShader;
+MyShader directionalBRDFShader;
+MyShader cubemapShader;
+MyShader ssaoShader;
+MyShader ssaoBlurShader;
+MyShader sharpeningShader;
+MyShader fxaaShader;
+
+Texture ironAlbedo;
+Texture ironNormal;
+Texture ironRoughness;
+Texture ironMetalness;
+Texture ironAO;
+
+Material pbrMat;
+
+Model shaderballModel;
+
+Light lightPoint1;
+Light lightPoint2;
+Light lightPoint3;
+Light lightDirectional1;
+
+CubeMap cubemapEnv;
 int main(int argc, char* argv[])
 {
     glfwInit();
@@ -132,39 +163,40 @@ int main(int argc, char* argv[])
     glfwSetScrollCallback(window, scroll_callback);
 
     // Model
-    Model shaderballModel("resource/model/shaderball/shaderball.obj");
+    shaderballModel.loadModel("resource/model/shaderball/shaderball.obj");
+
 
     // Texture
-    TextureObject ironAlbedo("resource/textures/pbr/rustediron/rustediron_albedo.png", "texAlbedo");
-    TextureObject ironNormal("resource/textures/pbr/rustediron/rustediron_normal.png", "texNormal");
-    TextureObject ironRoughness("resource/textures/pbr/rustediron/rustediron_roughness.png", "texRoughness");
-    TextureObject ironMetalness("resource/textures/pbr/rustediron/rustediron_metalness.png", "texMetalness");
-    TextureObject ironAO("resource/textures/pbr/rustediron/rustediron_ao.png", "texAO");
+    ironAlbedo.setTexture("resource/textures/pbr/rustediron/rustediron_albedo.png", "texAlbedo");
+    ironNormal.setTexture("resource/textures/pbr/rustediron/rustediron_normal.png", "texNormal");
+    ironRoughness.setTexture("resource/textures/pbr/rustediron/rustediron_roughness.png", "texRoughness");
+    ironMetalness.setTexture("resource/textures/pbr/rustediron/rustediron_metalness.png", "texMetalness");
+    ironAO.setTexture("resource/textures/pbr/rustediron/rustediron_ao.png", "texAO");
 
     // Shader
 
-    MyShader gBufferShader("resource/shaders/gbuffer.vert", "resource/shaders/gbuffer.frag");
-    MyShader velocityShader("resource/shaders/velocity.vert", "resource/shaders/velocity.frag");
+    gBufferShader.setShader("resource/shaders/gbuffer.vert", "resource/shaders/gbuffer.frag");
+    velocityShader.setShader("resource/shaders/velocity.vert", "resource/shaders/velocity.frag");
 
-    MyShader lightShader("resource/shaders/lighting/light.vert", "resource/shaders/lighting/light.frag");
-    MyShader pointBRDFShader("resource/shaders/lighting/pointbrdf.vert", "resource/shaders/lighting/pointbrdf.frag");
-    MyShader directionalBRDFShader("resource/shaders/lighting/directionalbrdf.vert", "resource/shaders/lighting/directionalbrdf.frag");
-    MyShader cubemapShader("resource/shaders/lighting/cubemap.vert", "resource/shaders/lighting/cubemap.frag");
+    lightShader.setShader("resource/shaders/lighting/light.vert", "resource/shaders/lighting/light.frag");
+    pointBRDFShader.setShader("resource/shaders/lighting/pointbrdf.vert", "resource/shaders/lighting/pointbrdf.frag");
+    directionalBRDFShader.setShader("resource/shaders/lighting/directionalbrdf.vert", "resource/shaders/lighting/directionalbrdf.frag");
+    cubemapShader.setShader("resource/shaders/lighting/cubemap.vert", "resource/shaders/lighting/cubemap.frag");
 
-    MyShader ssaoShader("resource/shaders/postprocess/ssao.vert", "resource/shaders/postprocess/ssao.frag");
-    MyShader ssaoBlurShader("resource/shaders/postprocess/ssao.vert", "resource/shaders/postprocess/ssaoblur.frag");
-    MyShader testPostprocessShader("resource/shaders/postprocess/postprocess.vert", "resource/shaders/postprocess/postprocess.frag");
+    ssaoShader.setShader("resource/shaders/postprocess/ssao.vert", "resource/shaders/postprocess/ssao.frag");
+    ssaoBlurShader.setShader("resource/shaders/postprocess/ssao.vert", "resource/shaders/postprocess/ssaoblur.frag");
+    fxaaShader.setShader("resource/shaders/postprocess/postprocess.vert", "resource/shaders/postprocess/fxaa.frag");
 
     // Basic shape
     
 
 
     // LightObject
-    LightObject lightPoint1(lightPointPosition1, glm::vec4(lightPointColor1, 1.0f),lightPointRadius1, true);
-    LightObject lightPoint2(lightPointPosition2, glm::vec4(lightPointColor2, 1.0f),lightPointRadius2, true);
-    LightObject lightPoint3(lightPointPosition3, glm::vec4(lightPointColor3, 1.0f),lightPointRadius3, true);
+    lightPoint1.setLight(lightPointPosition1, glm::vec4(lightPointColor1, 1.0f), lightPointRadius1, true);
+    lightPoint2.setLight(lightPointPosition2, glm::vec4(lightPointColor2, 1.0f), lightPointRadius2, true);
+    lightPoint3.setLight(lightPointPosition3, glm::vec4(lightPointColor3, 1.0f), lightPointRadius3, true);
 
-    LightObject lightDirectional1(glm::vec3(-0.2f, -1.0f, -0.3f), glm::vec4(lightDirectionalColor1, 1.0f));
+    lightDirectional1.setLight(glm::vec3(-0.2f, -1.0f, -0.3f), glm::vec4(lightDirectionalColor1, 1.0f));
 
 
     //Cubemap
@@ -176,11 +208,10 @@ int main(int argc, char* argv[])
     cubeFaces.push_back("resource/textures/cubemap/lake/back.jpg");
     cubeFaces.push_back("resource/textures/cubemap/lake/front.jpg");
 
-    CubeMap cubemapEnv(cubeFaces);
-
+    cubemapEnv.setCubeMap(cubeFaces);
 
     // Set the samplers for the lighting pass
-    pointBRDFShader.Use();
+    pointBRDFShader.useShader();
     glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gPosition"), 0);
     glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gNormal"), 1);
     glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gAlbedo"), 2);
@@ -189,7 +220,7 @@ int main(int argc, char* argv[])
     glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gAO"), 5);
     glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "ssao"), 6);
 
-    directionalBRDFShader.Use();
+    directionalBRDFShader.useShader();
     glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gPosition"), 0);
     glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gNormal"), 1);
     glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gAlbedo"), 2);
@@ -198,7 +229,7 @@ int main(int argc, char* argv[])
     glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gAO"), 5);
     glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "ssao"), 6);
 
-    ssaoShader.Use();
+    ssaoShader.useShader();
     glUniform1i(glGetUniformLocation(ssaoShader.Program, "gPosition"), 0);
     glUniform1i(glGetUniformLocation(ssaoShader.Program, "gNormal"), 1);
     glUniform1i(glGetUniformLocation(ssaoShader.Program, "texNoise"), 2);
@@ -222,13 +253,14 @@ int main(int argc, char* argv[])
     // --------------------------------------------------------------
 
     // Queries setting for profiling
-    GLuint64 startGeometryTime, startLightingTime, startForwardTime, startSSAOTime, startCubemapTime, startGUITime;
-    GLuint64 stopGeometryTime, stopLightingTime, stopForwardTime, stopSSAOTime, stopCubemapTime, stopGUITime;
+    GLuint64 startGeometryTime, startLightingTime, startForwardTime, startSSAOTime, startPostprocessTime, startCubemapTime, startGUITime;
+    GLuint64 stopGeometryTime, stopLightingTime, stopForwardTime, stopSSAOTime, stopPostprocessTime, stopCubemapTime, stopGUITime;
 
     unsigned int queryIDGeometry[2];
     unsigned int queryIDLighting[2];
     unsigned int queryIDForward[2];
     unsigned int queryIDSSAO[2];
+    unsigned int queryIDPostprocess[2];
     unsigned int queryIDCubemap[2];
     unsigned int queryIDGUI[2];
 
@@ -236,6 +268,7 @@ int main(int argc, char* argv[])
     glGenQueries(2, queryIDLighting);
     glGenQueries(2, queryIDForward);
     glGenQueries(2, queryIDSSAO);
+    glGenQueries(2, queryIDPostprocess);
     glGenQueries(2, queryIDCubemap);
     glGenQueries(2, queryIDGUI);
 
@@ -272,7 +305,7 @@ int main(int argc, char* argv[])
 
 
         // Model rendering
-        gBufferShader.Use();
+        gBufferShader.useShader();
 
         
         glUniformMatrix4fv(glGetUniformLocation(gBufferShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
@@ -289,19 +322,19 @@ int main(int argc, char* argv[])
         glUniform3f(glGetUniformLocation(gBufferShader.Program, "albedoColor"), albedoColor.r, albedoColor.g, albedoColor.b);
 
         glActiveTexture(GL_TEXTURE0);
-        ironAlbedo.Bind();
+        ironAlbedo.useTexture();
         glUniform1i(glGetUniformLocation(gBufferShader.Program, "texAlbedo"), 0);
         glActiveTexture(GL_TEXTURE1);
-        ironRoughness.Bind();
+        ironRoughness.useTexture();
         glUniform1i(glGetUniformLocation(gBufferShader.Program, "texRoughness"), 1);
         glActiveTexture(GL_TEXTURE2);
-        ironMetalness.Bind();
+        ironMetalness.useTexture();
         glUniform1i(glGetUniformLocation(gBufferShader.Program, "texMetalness"), 2);
         glActiveTexture(GL_TEXTURE3);
-        ironAO.Bind();
+        ironAO.useTexture();
         glUniform1i(glGetUniformLocation(gBufferShader.Program, "texAO"), 3);
 
-        shaderballModel.Draw(gBufferShader);
+        shaderballModel.Draw();
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glQueryCounter(queryIDGeometry[1], GL_TIMESTAMP);
@@ -312,7 +345,7 @@ int main(int argc, char* argv[])
         glClear(GL_COLOR_BUFFER_BIT);
 
         // SSAO texture
-        ssaoShader.Use();
+        ssaoShader.useShader();
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gPosition);
@@ -340,7 +373,7 @@ int main(int argc, char* argv[])
         glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        ssaoBlurShader.Use();
+        ssaoBlurShader.useShader();
 
         glUniform1i(glGetUniformLocation(ssaoBlurShader.Program, "ssaoBlurSize"), ssaoBlurSize);
         glActiveTexture(GL_TEXTURE0);
@@ -354,10 +387,11 @@ int main(int argc, char* argv[])
 
         // Light Pass rendering
         glQueryCounter(queryIDLighting[0], GL_TIMESTAMP);
+        glBindFramebuffer(GL_FRAMEBUFFER, postprocessFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        pointBRDFShader.Use();
-
+        pointBRDFShader.useShader();
+        
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gPosition);
         glActiveTexture(GL_TEXTURE1);
@@ -373,9 +407,9 @@ int main(int argc, char* argv[])
         glActiveTexture(GL_TEXTURE6);
         glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);
 
-        // Lights rendering
+         //Lights rendering
 
-        // Point Light
+         //Point Light
         lightPoint1.setLightPosition(lightPointPosition1);
         lightPoint2.setLightPosition(lightPointPosition2);
         lightPoint3.setLightPosition(lightPointPosition3);
@@ -385,24 +419,23 @@ int main(int argc, char* argv[])
         lightPoint1.setLightRadius(lightPointRadius1);
         lightPoint2.setLightRadius(lightPointRadius2);
         lightPoint3.setLightRadius(lightPointRadius3);
-
-        for (int i = 0; i < LightObject::lightPointList.size(); i++)
+        
+        for (int i = 0; i < Light::lightPointList.size(); i++)
         {
-            LightObject::lightPointList[i].renderToShader(pointBRDFShader, camera);
+            Light::lightPointList[i].renderToShader(pointBRDFShader, camera);
         }
-
+        
         glUniform3f(glGetUniformLocation(pointBRDFShader.Program, "viewPos"), camera.cameraPosition.x, camera.cameraPosition.y, camera.cameraPosition.z);
         glUniform1f(glGetUniformLocation(pointBRDFShader.Program, "materialRoughness"), materialRoughness);
         glUniform1f(glGetUniformLocation(pointBRDFShader.Program, "materialMetallicity"), materialMetallicity);
         glUniform3f(glGetUniformLocation(pointBRDFShader.Program, "materialF0"), materialF0.r, materialF0.g, materialF0.b);
         glUniform1f(glGetUniformLocation(pointBRDFShader.Program, "ambientIntensity"), ambientIntensity);
         glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gBufferView"), gBufferView);
-        glUniform1f(glGetUniformLocation(pointBRDFShader.Program, "ssaoVisibility"), ssaoVisibility);
 
 
 
-        //directionalBRDFShader.Use();
-
+        //directionalBRDFShader.useShader();
+        //
         //glActiveTexture(GL_TEXTURE0);
         //glBindTexture(GL_TEXTURE_2D, gPosition);
         //glActiveTexture(GL_TEXTURE1);
@@ -421,9 +454,9 @@ int main(int argc, char* argv[])
         //
         //lightDirectional1.setLightColor(glm::vec4(lightDirectionalColor1, 1.0f));
         //
-        //for(int i = 0; i < LightObject::lightDirectionalList.size(); i++)
+        //for(int i = 0; i < Light::lightDirectionalList.size(); i++)
         //{
-        //    LightObject::lightDirectionalList[i].renderToShader(directionalBRDFShader, camera);
+        //    Light::lightDirectionalList[i].renderToShader(directionalBRDFShader, camera);
         //}
         //
         //
@@ -445,9 +478,19 @@ int main(int argc, char* argv[])
         gBufferQuad();
 
         // Post-processing Pass rendering
-        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        //testPostprocessShader.Use();
-        //gBufferQuad();
+        glQueryCounter(queryIDPostprocess[0], GL_TIMESTAMP);
+        glClear(GL_COLOR_BUFFER_BIT);
+        
+        if (fxaaMode)
+        {
+            fxaaShader.useShader();
+            glUniform2f(glGetUniformLocation(fxaaShader.Program, "screenTextureSize"), 1.0f / WIDTH, 1.0f / HEIGHT);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, postprocessBuffer);
+        }
+        
+        gBufferQuad();
+        glQueryCounter(queryIDPostprocess[1], GL_TIMESTAMP);
 
         // Forward Pass rendering
         glQueryCounter(queryIDForward[0], GL_TIMESTAMP);
@@ -459,16 +502,16 @@ int main(int argc, char* argv[])
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // Shape(s) rendering
-        lightShader.Use();
+        lightShader.useShader();
         glUniformMatrix4fv(glGetUniformLocation(lightShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glUniformMatrix4fv(glGetUniformLocation(lightShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
-        for (int i = 0; i < LightObject::lightPointList.size(); i++)
+        for (int i = 0; i < Light::lightPointList.size(); i++)
         {
-            glUniform4f(glGetUniformLocation(lightShader.Program, "lightColor"), LightObject::lightPointList[i].getLightColor().r, LightObject::lightPointList[i].getLightColor().g, LightObject::lightPointList[i].getLightColor().b, LightObject::lightPointList[i].getLightColor().a);
+            glUniform4f(glGetUniformLocation(lightShader.Program, "lightColor"), Light::lightPointList[i].getLightColor().r, Light::lightPointList[i].getLightColor().g, Light::lightPointList[i].getLightColor().b, Light::lightPointList[i].getLightColor().a);
 
-            if (LightObject::lightPointList[i].isMesh())
-                LightObject::lightPointList[i].lightMesh.drawShape(lightShader, view, projection, camera);
+            if (Light::lightPointList[i].isMesh())
+                Light::lightPointList[i].lightMesh.drawShape(lightShader, view, projection, camera);
         }
         glQueryCounter(queryIDForward[1], GL_TIMESTAMP);
 
@@ -491,15 +534,17 @@ int main(int argc, char* argv[])
         GLint stopLightingTimerAvailable = 0;
         GLint stopForwardTimerAvailable = 0;
         GLint stopSSAOTimerAvailable = 0;
+        GLint stopPostprocessTimerAvailable = 0;
         GLint stopCubemapTimerAvailable = 0;
         GLint stopGUITimerAvailable = 0;
 
-        while (!stopGeometryTimerAvailable && !stopLightingTimerAvailable && !stopForwardTimerAvailable && !stopSSAOTimerAvailable && !stopCubemapTimerAvailable && !stopGUITimerAvailable)
+        while (!stopGeometryTimerAvailable && !stopLightingTimerAvailable && !stopForwardTimerAvailable && !stopSSAOTimerAvailable && !stopPostprocessTimerAvailable && !stopCubemapTimerAvailable && !stopGUITimerAvailable)
         {
             glGetQueryObjectiv(queryIDGeometry[1], GL_QUERY_RESULT_AVAILABLE, &stopGeometryTimerAvailable);
             glGetQueryObjectiv(queryIDLighting[1], GL_QUERY_RESULT_AVAILABLE, &stopLightingTimerAvailable);
             glGetQueryObjectiv(queryIDForward[1], GL_QUERY_RESULT_AVAILABLE, &stopForwardTimerAvailable);
             glGetQueryObjectiv(queryIDSSAO[1], GL_QUERY_RESULT_AVAILABLE, &stopSSAOTimerAvailable);
+            glGetQueryObjectiv(queryIDPostprocess[1], GL_QUERY_RESULT_AVAILABLE, &stopPostprocessTimerAvailable);
             glGetQueryObjectiv(queryIDCubemap[1], GL_QUERY_RESULT_AVAILABLE, &stopCubemapTimerAvailable);
             glGetQueryObjectiv(queryIDGUI[1], GL_QUERY_RESULT_AVAILABLE, &stopGUITimerAvailable);
         }
@@ -512,6 +557,8 @@ int main(int argc, char* argv[])
         glGetQueryObjectui64v(queryIDForward[1], GL_QUERY_RESULT, &stopForwardTime);
         glGetQueryObjectui64v(queryIDSSAO[0], GL_QUERY_RESULT, &startSSAOTime);
         glGetQueryObjectui64v(queryIDSSAO[1], GL_QUERY_RESULT, &stopSSAOTime);
+        glGetQueryObjectui64v(queryIDPostprocess[0], GL_QUERY_RESULT, &startPostprocessTime);
+        glGetQueryObjectui64v(queryIDPostprocess[1], GL_QUERY_RESULT, &stopPostprocessTime);
         glGetQueryObjectui64v(queryIDCubemap[0], GL_QUERY_RESULT, &startCubemapTime);
         glGetQueryObjectui64v(queryIDCubemap[1], GL_QUERY_RESULT, &stopCubemapTime);
         glGetQueryObjectui64v(queryIDGUI[0], GL_QUERY_RESULT, &startGUITime);
@@ -521,6 +568,7 @@ int main(int argc, char* argv[])
         deltaLightingTime = (stopLightingTime - startLightingTime) / 1000000.0;
         deltaForwardTime = (stopForwardTime - startForwardTime) / 1000000.0;
         deltaSSAOTime = (stopSSAOTime - startSSAOTime) / 1000000.0;
+        deltaPostprocessTime = (stopPostprocessTime - startPostprocessTime) / 1000000.0;
         deltaCubemapTime = (stopCubemapTime - startCubemapTime) / 1000000.0;
         deltaGUITime = (stopGUITime - startGUITime) / 1000000.0;
 
@@ -613,6 +661,12 @@ void imGuiSetup()
 
             ImGui::TreePop();
         }
+        if (ImGui::TreeNode("Post processing"))
+        {
+            ImGui::Checkbox("FXAA", &fxaaMode);
+
+            ImGui::TreePop();
+        }
     }
 
     if (ImGui::CollapsingHeader("Profiling", 0, true, true))
@@ -621,6 +675,7 @@ void imGuiSetup()
         ImGui::Text("Lighting Pass :    %.4f ms", deltaLightingTime);
         ImGui::Text("Forward Pass :     %.4f ms", deltaForwardTime);
         ImGui::Text("SSAO Pass :        %.4f ms", deltaSSAOTime);
+        ImGui::Text("Postprocess Pass : %.4f ms", deltaPostprocessTime);
         ImGui::Text("Cubemap Pass :     %.4f ms", deltaCubemapTime);
         ImGui::Text("GUI Pass :         %.4f ms", deltaGUITime);
     }
@@ -647,6 +702,7 @@ void imGuiSetup()
 
 void postprocessSetup()
 {
+    // Post-processing Buffer
     glGenFramebuffers(1, &postprocessFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, postprocessFBO);
 
@@ -656,8 +712,9 @@ void postprocessSetup()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postprocessBuffer, 0);
+
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "SSAO Framebuffer not complete !" << std::endl;
+        std::cout << "Postprocess Framebuffer not complete !" << std::endl;
 }
 
 
@@ -753,7 +810,7 @@ void gBufferSetup()
 void ssaoSetup()
 {
     // SSAO Buffer
-    glGenFramebuffers(1, &ssaoFBO);  glGenFramebuffers(1, &ssaoBlurFBO);
+    glGenFramebuffers(1, &ssaoFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
     glGenTextures(1, &ssaoBuffer);
     glBindTexture(GL_TEXTURE_2D, ssaoBuffer);
@@ -762,9 +819,10 @@ void ssaoSetup()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoBuffer, 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "SSAO Framebuffer not complete !" << std::endl;
+        std::cout << "Postprocess Framebuffer not complete !" << std::endl;
 
     // SSAO Blur Buffer
+    glGenFramebuffers(1, &ssaoBlurFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO);
     glGenTextures(1, &ssaoBlurBuffer);
     glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);

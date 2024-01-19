@@ -40,6 +40,7 @@ float DistributionGGX(vec3 N, vec3 H, float roughness);
 float GeometryAttenuationGGXSmith(float NdotL, float NdotV, float roughness);
 vec3 colorLinear(vec3 colorVector);
 vec3 colorSRGB(vec3 colorVector);
+vec3 ReinhardTM(vec3 color);
 float saturate(float f);
 vec2 saturate(vec2 vec);
 vec3 saturate(vec3 vec);
@@ -58,7 +59,7 @@ void main()
 
     vec3 V = normalize(- worldPos); // 视点方向
     vec3 N = normalize(normal); // 法线方向
-    vec3 R = normalize(-reflect(V, N)); // 反射方向
+    vec3 R = normalize(reflect(- V, N)); // 反射方向
 
     vec3 color = vec3(0.0f); // 最终颜色
     vec3 diffuse = vec3(0.0f); // 漫反射颜色
@@ -66,6 +67,18 @@ void main()
     
 
     vec3 ambient = ao * albedo * vec3(ambientIntensity);
+
+    // Light source independent BRDF term(s)
+    float NdotV = saturate(dot(N, V));
+
+    // Fresnel (Schlick) computation (F term)
+    vec3 F0 = mix(materialF0, albedo, metalness);
+    vec3 F = FresnelSchlick(NdotV, F0, roughness);
+
+    // Energy conservation
+    vec3 kS = F;
+    vec3 kD = vec3(1.0f) - kS;
+    kD *= 1.0f - metalness;
 
     for (int i = 0; i < lightDirectionalCounter; i++)
     {
@@ -76,7 +89,6 @@ void main()
 
         // BRDF terms
         float NdotL = saturate(dot(N, L));
-        float NdotV = saturate(dot(N, V));
 
         // Diffuse component computation
 //        diffuse = albedo/PI - (albedo/PI) * metalness;    // The right way to compute diffuse but any surface that should reflect the environment would appear black at the moment...
@@ -85,9 +97,6 @@ void main()
         // Disney diffuse term
         float kDisney = KDisneyTerm(NdotL, NdotV, roughness);
 
-        // Fresnel (Schlick) computation (F term)
-        vec3 F0 = mix(materialF0, diffuse, metalness);
-        vec3 F = FresnelSchlick(max(NdotV, 0.0), F0, roughness);
 
         // Distribution (GGX) computation (D term)
         float D = DistributionGGX(N, H, roughness);
@@ -98,22 +107,17 @@ void main()
         // Specular component computation
         specular = (F * D * G) / (4 * NdotL * NdotV + 0.0001f);
 
-        // Diffuse energy conservation
-        vec3 kD = 1.0f - specular;
-        // kD *= 1.0f - metalness;
-        vec3 kS = vec3(1.0f);
-        // vec3 kS = F;
-
-
-        color += (diffuse * kDisney * kD + specular * kS) * lightColor * NdotL * ssao;
+        color += (diffuse * kDisney * kD + specular) * lightColor * NdotL * ssao;
     }
     color += ambient;
+    // Reinhard Tonemapping
+    color = ReinhardTM(color);
 
     // Switching between the different buffers
     if(gBufferView == 1)
     {
         color = colorSRGB(color);
-        colorOutput = vec4(color, 1.0);
+        colorOutput = vec4(color, 1.0f);
     }
     // Position buffer
     else if (gBufferView == 2)
@@ -162,13 +166,13 @@ float KDisneyTerm(float NoL, float NoV, float roughness)
 
 vec3 FresnelSchlick(float NdotV, vec3 F0)
 {
-    return F0 + (1.0 - F0) * pow(1.0 - NdotV, 5.0);
+    return F0 + (1.0f - F0) * pow(1.0f - NdotV, 5.0f);
 }
 
 
 vec3 FresnelSchlick(float NdotV, vec3 F0, float roughness)
 {
-    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - NdotV, 5.0);
+    return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0f - NdotV, 5.0f);
 }
 
 
@@ -177,10 +181,10 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
     float alpha = roughness * roughness;
     float alpha2 = alpha * alpha;
 
-    float NdotH = max(dot(N, H), 0.0);
+    float NdotH = max(dot(N, H), 0.0f);
     float NdotH2 = NdotH * NdotH;
 
-    return (alpha2) / (PI * (NdotH2 * (alpha2 - 1.0) + 1.0) * (NdotH2 * (alpha2 - 1.0) + 1.0));
+    return (alpha2) / (PI * (NdotH2 * (alpha2 - 1.0f) + 1.0f) * (NdotH2 * (alpha2 - 1.0f) + 1.0f));
 }
 
 
@@ -190,8 +194,8 @@ float GeometryAttenuationGGXSmith(float NdotL, float NdotV, float roughness)
     float NdotV2 = NdotV * NdotV;
     float kRough2 = roughness * roughness;
 
-    float ggxL = (2.0 * NdotL) / (NdotL + sqrt(NdotL2 + kRough2 * (1.0 - NdotL2)));
-    float ggxV = (2.0 * NdotV) / (NdotV + sqrt(NdotV2 + kRough2 * (1.0 - NdotV2)));
+    float ggxL = (2.0f * NdotL) / (NdotL + sqrt(NdotL2 + kRough2 * (1.0f - NdotL2)));
+    float ggxV = (2.0f * NdotV) / (NdotV + sqrt(NdotV2 + kRough2 * (1.0f - NdotV2)));
 
     return ggxL * ggxV;
 }
@@ -210,6 +214,11 @@ vec3 colorSRGB(vec3 colorVector)
   vec3 srgbColor = pow(colorVector.rgb, vec3(1.0f / 2.2f));
 
   return srgbColor;
+}
+
+vec3 ReinhardTM(vec3 color)
+{
+    return color / (color + vec3(1.0f));
 }
 
 

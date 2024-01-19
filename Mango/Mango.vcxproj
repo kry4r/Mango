@@ -137,19 +137,28 @@
     <ClCompile Include="3rdparty\imgui\imgui.cpp" />
     <ClCompile Include="3rdparty\imgui\imgui_draw.cpp" />
     <ClCompile Include="3rdparty\imgui\imgui_impl_glfw_gl3.cpp" />
-    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\camera.cpp" />
+    <ClCompile Include="src\cubemap.cpp" />
+    <ClCompile Include="src\light.cpp" />
+    <ClCompile Include="src\Mango.cpp" />
+    <ClCompile Include="src\material.cpp" />
+    <ClCompile Include="src\mesh.cpp" />
+    <ClCompile Include="src\model.cpp" />
+    <ClCompile Include="src\shader.cpp" />
+    <ClCompile Include="src\shape.cpp" />
+    <ClCompile Include="src\texture.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\headers\materialobject.h" />
-    <ClInclude Include="src\headers\shapeobject.h" />
+    <ClInclude Include="src\headers\material.h" />
+    <ClInclude Include="src\headers\shape.h" />
     <ClInclude Include="src\headers\camera.h" />
     <ClInclude Include="src\headers\cubemap.h" />
     <ClInclude Include="src\headers\imconfig.h" />
-    <ClInclude Include="src\headers\lightobject.h" />
+    <ClInclude Include="src\headers\light.h" />
     <ClInclude Include="src\headers\mesh.h" />
     <ClInclude Include="src\headers\model.h" />
     <ClInclude Include="src\headers\shader.h" />
-    <ClInclude Include="src\headers\textureobject.h" />
+    <ClInclude Include="src\headers\texture.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
