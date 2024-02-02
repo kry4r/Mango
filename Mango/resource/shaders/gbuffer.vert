@@ -4,7 +4,7 @@ layout (location = 0) in vec3 position;
 layout (location = 1) in vec3 Normal;
 layout (location = 2) in vec2 texCoords;
 
-out vec3 worldPos;
+out vec3 viewPos;
 out vec2 TexCoords;
 out vec3 normal;
 
@@ -18,11 +18,12 @@ uniform mat4 prevModelViewProj;
 void main()
 {
     // View Space
-    vec4 viewPos = view * model * vec4(position, 1.0f);
-    worldPos = viewPos.xyz;
-    gl_Position = projection * viewPos;
+    vec4 viewFragPos = view * model * vec4(position, 1.0f);
+    viewPos = viewFragPos.xyz;
     TexCoords = texCoords;
 
     mat3 normalMatrix = transpose(inverse(mat3(view * model)));
     normal = normalMatrix * Normal;
+
+    gl_Position = projection * viewFragPos;
 }

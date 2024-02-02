@@ -1,17 +1,65 @@
 #version 400 core
 
 in vec2 TexCoords;
-out vec4 color;
+out vec4 colorOutput;
+
+float middleGrey = 0.18f;
 
 uniform sampler2D screenTexture;
+uniform sampler2D ssao;
+
+uniform int gBufferView;
+uniform bool ssaoMode;
+uniform bool fxaaMode;
+uniform float cameraAperture;
+uniform float cameraShutterSpeed;
+uniform float cameraISO;
 uniform vec2 screenTextureSize;
 
 float FXAA_SPAN_MAX = 8.0f;
 float FXAA_REDUCE_MUL = 1.0f/8.0f;
 float FXAA_REDUCE_MIN = 1.0f/128.0f;
 
+vec3 colorLinear(vec3 colorVector);
+vec3 colorSRGB(vec3 colorVector);
+vec3 ReinhardTM(vec3 color);
+float computeSOBExposure(float aperture, float shutterSpeed, float iso);
+vec3 computeFxaa();
+
 
 void main()
+{
+    vec3 color;
+
+    if(gBufferView == 1)
+    {
+        if(fxaaMode)
+            color = computeFxaa();  // Don't know if applying FXAA first is a good idea, especially with effects such as motion blur and DoF...
+        else
+            color = texture(screenTexture, TexCoords).rgb;
+
+        if(ssaoMode)
+        {
+            float ssao = texture(ssao, TexCoords).r;
+            color *= ssao;
+        }
+
+        color *= computeSOBExposure(cameraAperture, cameraShutterSpeed, cameraISO);
+        color = ReinhardTM(color);
+
+        colorOutput = vec4(colorSRGB(color), 1.0f);
+    }
+
+    else    // No tonemapping or linear/sRGB conversion if we want to visualize the different buffers
+    {
+        color = texture(screenTexture, TexCoords).rgb;
+        colorOutput = vec4(color, 1.0f);
+    }
+}
+
+
+
+vec3 computeFxaa()
 {
     vec2 screenTextureOffset = screenTextureSize;
     vec3 luma = vec3(0.299f, 0.587f, 0.114f);
@@ -47,7 +95,37 @@ void main()
     float lumaResultB = dot(luma, resultB);
 
     if(lumaResultB < lumaMin || lumaResultB > lumaMax)
-        color = vec4(resultA, 1.0f);
+        return vec3(resultA);
     else
-        color = vec4(resultB, 1.0f);
+        return vec3(resultB);
+}
+
+
+vec3 colorLinear(vec3 colorVector)
+{
+  vec3 linearColor = pow(colorVector.rgb, vec3(2.2f));
+
+  return linearColor;
+}
+
+
+vec3 colorSRGB(vec3 colorVector)
+{
+  vec3 srgbColor = pow(colorVector.rgb, vec3(1.0f / 2.2f));
+
+  return srgbColor;
+}
+
+
+vec3 ReinhardTM(vec3 color)
+{
+    return color / (color + vec3(1.0f));
+}
+
+
+float computeSOBExposure(float aperture, float shutterSpeed, float iso)
+{
+    float lAvg = (1000.0f / 65.0f) * sqrt(aperture) / (iso * shutterSpeed);
+
+    return middleGrey / lAvg;
 }
