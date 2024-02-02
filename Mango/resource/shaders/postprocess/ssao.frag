@@ -14,7 +14,6 @@ uniform int ssaoNoiseSize;
 uniform float ssaoRadius;
 uniform float ssaoPower;
 uniform float ssaoBias;
-
 uniform vec3 samples[128];
 uniform mat4 projection;
 
@@ -27,6 +26,7 @@ void main()
     vec3 fragPos = texture(gPosition, TexCoords).xyz;
     vec3 normal = normalize(texture(gNormal, TexCoords).rgb);
     vec3 randomVec = normalize(texture(texNoise, TexCoords * noiseScale).xyz);
+
     // TBN : Tangent Space --> View Space
     vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
     vec3 bitangent = cross(normal, tangent);

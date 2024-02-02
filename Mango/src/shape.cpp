@@ -87,14 +87,14 @@ void Shape::setShape(std::string type, glm::vec3 position)
 
     glGenVertexArrays(1, &shapeVAO);
     glGenBuffers(1, &shapeVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, shapeVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, this->shapeVBO);
 
     if (type == "cube")
         glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
     else if (type == "plane")
         glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
 
-    glBindVertexArray(shapeVAO);
+    glBindVertexArray(this->shapeVAO);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
     glEnableVertexAttribArray(1);
@@ -117,12 +117,12 @@ void Shape::drawShape(MyShader& lightingShader, glm::mat4& view, glm::mat4& proj
     glUniform3f(glGetUniformLocation(lightingShader.Program, "viewPos"), camera.cameraPosition.x, camera.cameraPosition.y, camera.cameraPosition.z);
 
     glm::mat4 model;
-    model = glm::translate(model, shapePosition);
-    model = glm::scale(model, shapeScale);
-    model = glm::rotate(model, shapeAngle, shapeRotationAxis);
+    model = glm::translate(model, this->shapePosition);
+    model = glm::scale(model, this->shapeScale);
+    model = glm::rotate(model, this->shapeAngle, this->shapeRotationAxis);
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-    glBindVertexArray(shapeVAO);
+    glBindVertexArray(this->shapeVAO);
     if (this->shapeType == "cube")
         glDrawArrays(GL_TRIANGLES, 0, 36);
     else if (this->shapeType == "plane")
@@ -133,37 +133,37 @@ void Shape::drawShape(MyShader& lightingShader, glm::mat4& view, glm::mat4& proj
 
 std::string Shape::getShapeType()
 {
-    return shapeType;
+    return this->shapeType;
 }
 
 
 glm::vec3 Shape::getShapePosition()
 {
-    return shapePosition;
+    return this->shapePosition;
 }
 
 
 GLfloat Shape::getShapeAngle()
 {
-    return shapeAngle;
+    return this->shapeAngle;
 }
 
 
 glm::vec3 Shape::getShapeRotationAxis()
 {
-    return shapeRotationAxis;
+    return this->shapeRotationAxis;
 }
 
 
 glm::vec3 Shape::getShapeScale()
 {
-    return shapeScale;
+    return this->shapeScale;
 }
 
 
 GLuint Shape::getShapeVAO()
 {
-    return shapeVAO;
+    return this->shapeVAO;
 }
 
 

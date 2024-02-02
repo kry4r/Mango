@@ -15,7 +15,7 @@ Material::~Material()
 
 void Material::addTexture(std::string uniformName, Texture texObj)
 {
-    texList.push_back(std::tuple<std::string, Texture>(uniformName, texObj));
+    this->texList.push_back(std::tuple<std::string, Texture>(uniformName, texObj));
 }
 
 
