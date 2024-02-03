@@ -19,12 +19,9 @@ uniform LightObject lightPointArray[3];
 
 // G-Buffer
 uniform sampler2D gPosition;
-uniform sampler2D gNormal;
 uniform sampler2D gAlbedo;
-uniform sampler2D gRoughness;
-uniform sampler2D gMetalness;
-uniform sampler2D gAO;
-uniform sampler2D gVelocity;
+uniform sampler2D gNormal;
+uniform sampler2D gEffects;
 
 uniform sampler2D ssao;
 uniform sampler2D envMap;
@@ -53,12 +50,12 @@ void main()
 {
     // Retrieve G-Buffer informations
     vec3 viewPos = texture(gPosition, TexCoords).rgb;
-    vec3 normal = texture(gNormal, TexCoords).rgb;
     vec3 albedo = colorLinear(texture(gAlbedo, TexCoords).rgb);
-    float roughness = texture(gRoughness, TexCoords).r;
-    float metalness = texture(gMetalness, TexCoords).r;
-    float ao = texture(gAO, TexCoords).r;
-    vec2 velocity = texture(gVelocity, TexCoords).rg;
+    vec3 normal = texture(gNormal, TexCoords).rgb;
+    float roughness = texture(gAlbedo, TexCoords).a;
+    float metalness = texture(gNormal, TexCoords).a;
+    float ao = texture(gEffects, TexCoords).r;
+    vec2 velocity = texture(gEffects, TexCoords).gb;
     float depth = texture(gPosition, TexCoords).a;
 
     float ssao = texture(ssao, TexCoords).r;

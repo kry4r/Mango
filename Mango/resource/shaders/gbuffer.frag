@@ -1,12 +1,9 @@
 #version 400 core
 
 layout (location = 0) out vec4 gPosition;
-layout (location = 1) out vec3 gNormal;
-layout (location = 2) out vec3 gAlbedo;
-layout (location = 3) out vec3 gRoughness;
-layout (location = 4) out vec3 gMetalness;
-layout (location = 5) out vec3 gAO;
-layout (location = 6) out vec2 gVelocity;
+layout (location = 1) out vec4 gAlbedo;
+layout (location = 2) out vec4 gNormal;
+layout (location = 3) out vec3 gEffects;
 
 in vec3 viewPos;
 in vec2 TexCoords;
@@ -30,29 +27,27 @@ vec3 computeTexNormal(vec3 viewNormal, vec3 texNormal);
 
 void main()
 {
-    vec3 texNormal = normalize(texture(texNormal, TexCoords).rgb * 2.0 - 1.0);
+    vec3 texNormal = normalize(texture(texNormal, TexCoords).rgb * 2.0f - 1.0f);
     texNormal.g = -texNormal.g;   // In case the normal map was made with DX3D coordinates system in mind
 
-    vec2 fragPosA = (fragPosition.xy / fragPosition.w) * 0.5 + 0.5;
-    vec2 fragPosB = (fragPrevPosition.xy / fragPrevPosition.w) * 0.5 + 0.5;
+    vec2 fragPosA = (fragPosition.xy / fragPosition.w) * 0.5f + 0.5f;
+    vec2 fragPosB = (fragPrevPosition.xy / fragPrevPosition.w) * 0.5f + 0.5f;
 
     gPosition = vec4(viewPos, LinearizeDepth(gl_FragCoord.z));
     gAlbedo.rgb = vec3(texture(texAlbedo, TexCoords));
-    //gAlbedo.rgb = vec3(albedoColor);
+    gAlbedo.a =  vec3(texture(texRoughness, TexCoords)).r;
     gNormal.rgb = computeTexNormal(normal, texNormal);
-    //gNormal.rgb = normalize(normal);
-    gRoughness.rgb = vec3(texture(texRoughness, TexCoords));
-    gMetalness.rgb = vec3(texture(texMetalness, TexCoords));
-    gAO.rgb = vec3(texture(texAO, TexCoords));
-    gVelocity.rg = fragPosA - fragPosB;
+    gNormal.a = vec3(texture(texMetalness, TexCoords)).r;
+    gEffects.r = vec3(texture(texAO, TexCoords)).r;
+    gEffects.gb = fragPosA - fragPosB;
 }
 
 
 
 float LinearizeDepth(float depth)
 {
-    float z = depth * 2.0 - 1.0;
-    return (2.0 * nearPlane * farPlane) / (farPlane + nearPlane - z * (farPlane - nearPlane));
+    float z = depth * 2.0f - 1.0f;
+    return (2.0f * nearPlane * farPlane) / (farPlane + nearPlane - z * (farPlane - nearPlane));
 }
 
 

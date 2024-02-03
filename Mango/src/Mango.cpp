@@ -52,7 +52,7 @@ GLuint WIDTH = 1280;
 GLuint HEIGHT = 720;
 
 GLuint screenQuadVAO, screenQuadVBO;
-GLuint gBuffer, zBuffer, gPosition, gNormal, gAlbedo, gRoughness, gMetalness, gAO, gVelocity;
+GLuint gBuffer, zBuffer, gPosition, gNormal, gAlbedo, gEffects;
 GLuint ssaoFBO, ssaoBlurFBO, ssaoBuffer, ssaoBlurBuffer, noiseTexture;
 GLuint postprocessFBO, postprocessBuffer;
 GLuint prefilterFBO, integrateFBO, prefilterBuffer, integrateBuffer;
@@ -63,6 +63,7 @@ GLint ssaoNoiseSize = 4;
 GLint ssaoBlurSize = 4;
 GLint motionBlurMaxSamples = 20;
 GLint brdfMaxSamples = 32;
+GLint tonemappingMode = 1;
 
 GLfloat lastX = WIDTH / 2;
 GLfloat lastY = HEIGHT / 2;
@@ -242,49 +243,40 @@ int main(int argc, char* argv[])
     // Set the samplers for the lighting pass
     pointBRDFShader.useShader();
     glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gPosition"), 0);
-    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gNormal"), 1);
-    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gAlbedo"), 2);
-    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gRoughness"), 3);
-    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gMetalness"), 4);
-    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gAO"), 5);
-    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gVelocity"), 6);
-    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "ssao"), 7);
-    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "envMap"), 8);
+    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gAlbedo"), 1);
+    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gNormal"), 2);
+    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gEffects"), 3);
+    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "ssao"), 4);
+    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "envMap"), 5);
 
     directionalBRDFShader.useShader();
     glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gPosition"), 0);
-    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gNormal"), 1);
-    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gAlbedo"), 2);
-    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gRoughness"), 3);
-    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gMetalness"), 4);
-    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gAO"), 5);
-    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "ssao"), 6);
-    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "envMap"), 7);
+    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gAlbedo"), 1);
+    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gNormal"), 2);
+    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gEffects"), 3);
+    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "ssao"), 4);
+    glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "envMap"), 5);
 
     environmentBRDFShader.useShader();
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gPosition"), 0);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gNormal"), 1);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gAlbedo"), 2);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gRoughness"), 3);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gMetalness"), 4);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gAO"), 5);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gVelocity"), 6);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "ssao"), 7);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "envMap"), 8);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "envMapIrradiance"), 9);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "envMapPrefilter"), 10);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "brdfLUT"), 11);
-
-    prefilterBRDFShader.useShader();
-    glUniform1i(glGetUniformLocation(prefilterBRDFShader.Program, "gPosition"), 0);
-    glUniform1i(glGetUniformLocation(prefilterBRDFShader.Program, "gNormal"), 1);
-    glUniform1i(glGetUniformLocation(prefilterBRDFShader.Program, "gRoughness"), 2);
-    glUniform1i(glGetUniformLocation(prefilterBRDFShader.Program, "envMap"), 3);
-
-    integrateBRDFShader.useShader();
-    glUniform1i(glGetUniformLocation(integrateBRDFShader.Program, "gPosition"), 0);
-    glUniform1i(glGetUniformLocation(integrateBRDFShader.Program, "gNormal"), 1);
-    glUniform1i(glGetUniformLocation(integrateBRDFShader.Program, "gRoughness"), 2);
+    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gAlbedo"), 1);
+    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gNormal"), 2);
+    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gEffects"), 3);
+    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "ssao"), 4);
+    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "envMap"), 5);
+    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "envMapIrradiance"), 6);
+    //glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "envMapPrefilter"), 7);
+    //glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "brdfLUT"), 8);
+    //
+    //prefilterBRDFShader.useShader();
+    //glUniform1i(glGetUniformLocation(prefilterBRDFShader.Program, "gPosition"), 0);
+    //glUniform1i(glGetUniformLocation(prefilterBRDFShader.Program, "gNormal"), 1);
+    //glUniform1i(glGetUniformLocation(prefilterBRDFShader.Program, "gRoughness"), 2);
+    //glUniform1i(glGetUniformLocation(prefilterBRDFShader.Program, "envMap"), 3);
+    //
+    //integrateBRDFShader.useShader();
+    //glUniform1i(glGetUniformLocation(integrateBRDFShader.Program, "gPosition"), 0);
+    //glUniform1i(glGetUniformLocation(integrateBRDFShader.Program, "gNormal"), 1);
+    //glUniform1i(glGetUniformLocation(integrateBRDFShader.Program, "gRoughness"), 2);
 
     ssaoShader.useShader();
     glUniform1i(glGetUniformLocation(ssaoShader.Program, "gPosition"), 0);
@@ -293,7 +285,7 @@ int main(int argc, char* argv[])
 
     firstpassShader.useShader();
     glUniform1i(glGetUniformLocation(firstpassShader.Program, "ssao"), 1);
-    glUniform1i(glGetUniformLocation(firstpassShader.Program, "gVelocity"), 2);
+    glUniform1i(glGetUniformLocation(firstpassShader.Program, "gEffects"), 2);
 
     // Setup
     // --------------------------------------------------------------
@@ -469,20 +461,14 @@ int main(int argc, char* argv[])
         //glActiveTexture(GL_TEXTURE0);
         //glBindTexture(GL_TEXTURE_2D, gPosition);
         //glActiveTexture(GL_TEXTURE1);
-        //glBindTexture(GL_TEXTURE_2D, gNormal);
-        //glActiveTexture(GL_TEXTURE2);
         //glBindTexture(GL_TEXTURE_2D, gAlbedo);
+        //glActiveTexture(GL_TEXTURE2);
+        //glBindTexture(GL_TEXTURE_2D, gNormal);
         //glActiveTexture(GL_TEXTURE3);
-        //glBindTexture(GL_TEXTURE_2D, gRoughness);
+        //glBindTexture(GL_TEXTURE_2D, gEffects);
         //glActiveTexture(GL_TEXTURE4);
-        //glBindTexture(GL_TEXTURE_2D, gMetalness);
-        //glActiveTexture(GL_TEXTURE5);
-        //glBindTexture(GL_TEXTURE_2D, gAO);
-        //glActiveTexture(GL_TEXTURE6);
-        //glBindTexture(GL_TEXTURE_2D, gVelocity);
-        //glActiveTexture(GL_TEXTURE7);
         //glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);
-        //glActiveTexture(GL_TEXTURE8);
+        //glActiveTexture(GL_TEXTURE5);
         //appartHDR.useTexture();
         //
         //lightPoint1.setLightPosition(lightPointPosition1);
@@ -514,18 +500,14 @@ int main(int argc, char* argv[])
         //glActiveTexture(GL_TEXTURE0);
         //glBindTexture(GL_TEXTURE_2D, gPosition);
         //glActiveTexture(GL_TEXTURE1);
-        //glBindTexture(GL_TEXTURE_2D, gNormal);
-        //glActiveTexture(GL_TEXTURE2);
         //glBindTexture(GL_TEXTURE_2D, gAlbedo);
+        //glActiveTexture(GL_TEXTURE2);
+        //glBindTexture(GL_TEXTURE_2D, gNormal);
         //glActiveTexture(GL_TEXTURE3);
-        //glBindTexture(GL_TEXTURE_2D, gRoughness);
+        //glBindTexture(GL_TEXTURE_2D, gEffects);
         //glActiveTexture(GL_TEXTURE4);
-        //glBindTexture(GL_TEXTURE_2D, gMetalness);
-        //glActiveTexture(GL_TEXTURE5);
-        //glBindTexture(GL_TEXTURE_2D, gAO);
-        //glActiveTexture(GL_TEXTURE6);
         //glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);
-        //glActiveTexture(GL_TEXTURE7);
+        //glActiveTexture(GL_TEXTURE5);
         //appartHDR.useTexture();
         //
         //lightDirectional1.setLightColor(glm::vec4(lightDirectionalColor1, 1.0f));
@@ -551,27 +533,21 @@ int main(int argc, char* argv[])
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gPosition);
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, gNormal);
-        glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, gAlbedo);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, gNormal);
         glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, gRoughness);
+        glBindTexture(GL_TEXTURE_2D, gEffects);
         glActiveTexture(GL_TEXTURE4);
-        glBindTexture(GL_TEXTURE_2D, gMetalness);
-        glActiveTexture(GL_TEXTURE5);
-        glBindTexture(GL_TEXTURE_2D, gAO);
-        glActiveTexture(GL_TEXTURE6);
-        glBindTexture(GL_TEXTURE_2D, gVelocity);
-        glActiveTexture(GL_TEXTURE7);
         glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);
-        glActiveTexture(GL_TEXTURE8);
+        glActiveTexture(GL_TEXTURE5);
         appartHDR.useTexture();
-        glActiveTexture(GL_TEXTURE9);
+        glActiveTexture(GL_TEXTURE6);
         appartIrradianceHDR.useTexture();
-        glActiveTexture(GL_TEXTURE10);
-        glBindTexture(GL_TEXTURE_2D, prefilterBuffer);
-        glActiveTexture(GL_TEXTURE11);
-        glBindTexture(GL_TEXTURE_2D, integrateBuffer);
+        //glActiveTexture(GL_TEXTURE10);
+        //glBindTexture(GL_TEXTURE_2D, prefilterBuffer);
+        //glActiveTexture(GL_TEXTURE11);
+        //glBindTexture(GL_TEXTURE_2D, integrateBuffer);
 
         glUniformMatrix4fv(glGetUniformLocation(environmentBRDFShader.Program, "inverseView"), 1, GL_FALSE, glm::value_ptr(glm::transpose(view)));
         glUniformMatrix4fv(glGetUniformLocation(environmentBRDFShader.Program, "inverseProj"), 1, GL_FALSE, glm::value_ptr(glm::inverse(projection)));
@@ -605,13 +581,14 @@ int main(int argc, char* argv[])
         glUniform1i(glGetUniformLocation(firstpassShader.Program, "motionBlurMode"), motionBlurMode);
         glUniform1f(glGetUniformLocation(firstpassShader.Program, "motionBlurScale"), int(ImGui::GetIO().Framerate) / 60.0f);
         glUniform1i(glGetUniformLocation(firstpassShader.Program, "motionBlurMaxSamples"), motionBlurMaxSamples);
+        glUniform1i(glGetUniformLocation(firstpassShader.Program, "tonemappingMode"), tonemappingMode);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, postprocessBuffer);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);
         glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, gVelocity);
+        glBindTexture(GL_TEXTURE_2D, gEffects);
         
         screenQuad();
         glQueryCounter(queryIDPostprocess[1], GL_TIMESTAMP);
@@ -793,6 +770,15 @@ void imGuiSetup()
                 ImGui::TreePop();
             }
 
+            if (ImGui::TreeNode("Tonemapping"))
+            {
+                ImGui::RadioButton("Reinhard", &tonemappingMode, 1);
+                ImGui::RadioButton("Filmic", &tonemappingMode, 2);
+                ImGui::RadioButton("Uncharted", &tonemappingMode, 3);
+
+                ImGui::TreePop();
+            }
+
             ImGui::TreePop();
         }
 
@@ -862,57 +848,35 @@ void gBufferSetup()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
 
-    // Normals
-    glGenTextures(1, &gNormal);
-    glBindTexture(GL_TEXTURE_2D, gNormal);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
 
-    // Albedo
+    // Albedo+Roughness
     glGenTextures(1, &gAlbedo);
     glBindTexture(GL_TEXTURE_2D, gAlbedo);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedo, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gAlbedo, 0);
 
-    // Roughness
-    glGenTextures(1, &gRoughness);
-    glBindTexture(GL_TEXTURE_2D, gRoughness);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+    // Normals + Metalness
+    glGenTextures(1, &gNormal);
+    glBindTexture(GL_TEXTURE_2D, gNormal);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gRoughness, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gNormal, 0);
 
-    // Metalness
-    glGenTextures(1, &gMetalness);
-    glBindTexture(GL_TEXTURE_2D, gMetalness);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    // Effects (AO + Velocity)
+    glGenTextures(1, &gEffects);
+    glBindTexture(GL_TEXTURE_2D, gEffects);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, gMetalness, 0);
-
-    // AO
-    glGenTextures(1, &gAO);
-    glBindTexture(GL_TEXTURE_2D, gAO);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, gAO, 0);
-
-    // Velocity
-    glGenTextures(1, &gVelocity);
-    glBindTexture(GL_TEXTURE_2D, gVelocity);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, GL_TEXTURE_2D, gVelocity, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gEffects, 0);
 
     // Define the COLOR_ATTACHMENTS for the G-Buffer
-    GLuint attachments[7] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6 };
-    glDrawBuffers(7, attachments);
+    GLuint attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+    glDrawBuffers(4, attachments);
 
     // Z-Buffer
     glGenRenderbuffers(1, &zBuffer);
@@ -1095,7 +1059,7 @@ void iblSetup()
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, gNormal);
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, gRoughness);
+    glBindTexture(GL_TEXTURE_2D, gAlbedo);
     glActiveTexture(GL_TEXTURE3);
     appartHDR.useTexture();
 
@@ -1116,7 +1080,7 @@ void iblSetup()
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, gNormal);
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, gRoughness);
+    glBindTexture(GL_TEXTURE_2D, gAlbedo);
 
     //glUniform1f(glGetUniformLocation(integrateBRDFShader.Program, "materialRoughness"), materialRoughness);
     //glUniformMatrix4fv(glGetUniformLocation(integrateBRDFShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));

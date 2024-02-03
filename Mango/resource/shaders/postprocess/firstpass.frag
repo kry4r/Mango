@@ -10,10 +10,11 @@ float middleGrey = 0.18f;
 
 uniform sampler2D screenTexture;
 uniform sampler2D ssao;
-uniform sampler2D gVelocity;
+uniform sampler2D gEffects;
 
 uniform int gBufferView;
 uniform int motionBlurMaxSamples;
+uniform int tonemappingMode;
 uniform bool ssaoMode;
 uniform bool fxaaMode;
 uniform bool motionBlurMode;
@@ -27,6 +28,8 @@ uniform vec2 screenTextureSize;
 vec3 colorLinear(vec3 colorVector);
 vec3 colorSRGB(vec3 colorVector);
 vec3 ReinhardTM(vec3 color);
+vec3 FilmicTM(vec3 color);
+vec3 UnchartedTM(vec3 color);
 float computeSOBExposure(float aperture, float shutterSpeed, float iso);
 vec3 computeFxaa();
 
@@ -46,7 +49,7 @@ void main()
         {
             vec2 texelSize = 1.0f / vec2(textureSize(screenTexture, 0));
 
-            vec2 velocity = texture(gVelocity, TexCoords).rg;
+            vec2 velocity = texture(gEffects, TexCoords).gb;
             velocity *= motionBlurScale;
 
             float fragSpeed = length(velocity / texelSize);
@@ -68,9 +71,26 @@ void main()
         }
 
         color *= computeSOBExposure(cameraAperture, cameraShutterSpeed, cameraISO);
-        color = ReinhardTM(color);
 
-        colorOutput = vec4(colorSRGB(color), 1.0f);
+        if(tonemappingMode == 1)
+            color = ReinhardTM(color);
+        else if(tonemappingMode == 2)
+            color = FilmicTM(color);
+        else if(tonemappingMode == 3)
+        {
+            float W = 11.2f;
+            color = UnchartedTM(color);
+            vec3 whiteScale = 1.0f / UnchartedTM(vec3(W));
+
+            color *= whiteScale;
+        }
+
+
+        if(tonemappingMode == 2)
+            colorOutput = vec4(color, 1.0f);
+        else
+            colorOutput = vec4(colorSRGB(color), 1.0f);
+
     }
 
     else    // No tonemapping or linear/sRGB conversion if we want to visualize the different buffers
@@ -143,6 +163,31 @@ vec3 colorSRGB(vec3 colorVector)
 vec3 ReinhardTM(vec3 color)
 {
     return color / (color + vec3(1.0f));
+}
+
+
+vec3 FilmicTM(vec3 color)
+{
+    color = max(vec3(0.0f), color - vec3(0.004f));
+    color = (color * (6.2f * color + 0.5f)) / (color * (6.2f * color + 1.7f) + 0.06f);
+
+    return color;
+}
+
+
+vec3 UnchartedTM(vec3 color)
+{
+  const float A = 0.15f;
+  const float B = 0.50f;
+  const float C = 0.10f;
+  const float D = 0.20f;
+  const float E = 0.02f;
+  const float F = 0.30f;
+  const float W = 11.2f;
+
+  color = ((color * (A * color + C * B) + D * E) / (color * ( A * color + B) + D * F)) - E / F;
+
+  return color;
 }
 
 

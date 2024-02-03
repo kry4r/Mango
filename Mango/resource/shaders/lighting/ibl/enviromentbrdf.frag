@@ -9,18 +9,15 @@ float PI  = 3.14159265359f;
 
 // G-Buffer
 uniform sampler2D gPosition;
-uniform sampler2D gNormal;
 uniform sampler2D gAlbedo;
-uniform sampler2D gRoughness;
-uniform sampler2D gMetalness;
-uniform sampler2D gAO;
-uniform sampler2D gVelocity;
+uniform sampler2D gNormal;
+uniform sampler2D gEffects;
 
 uniform sampler2D ssao;
 uniform sampler2D envMap;
 uniform sampler2D envMapIrradiance;
-uniform sampler2D envMapPrefilter;
-uniform sampler2D brdfLUT;
+//uniform sampler2D envMapPrefilter;
+//uniform sampler2D brdfLUT;
 
 uniform int gBufferView;
 uniform int brdfMaxSamples;
@@ -39,23 +36,24 @@ float GeometryAttenuationGGXSmith(float NdotL, float NdotV, float roughness);
 vec3 colorLinear(vec3 colorVector);
 float saturate(float f);
 vec2 getSphericalCoord(vec3 normalCoord);
-vec2 Hammersley(int i, int N);
+float radicalInverse_VdC(uint bits);
+vec2 Hammersley(uint i, uint N);
 vec3 ImportanceSampleGGX(vec2 Xi, float roughness, vec3 N);
-vec3 PrefilterEnvMap(float roughness, vec3 R);
-vec2 IntegrateBRDF(float roughness, float NoV);
-vec3 ApproximateSpecularIBL(vec3 specularColor, float roughness, vec3 N, vec3 V);
+vec3 prefilterEnvMap(float roughness, vec3 R);
+vec2 integrateBRDF(float roughness, float NoV);
+vec3 computeApproximateRadiance(vec3 specularColor, float roughness, vec3 N, vec3 V);
 
 
 void main()
 {
     // Retrieve G-Buffer informations
     vec3 viewPos = texture(gPosition, TexCoords).rgb;
-    vec3 normal = texture(gNormal, TexCoords).rgb;
     vec3 albedo = colorLinear(texture(gAlbedo, TexCoords).rgb);
-    float roughness = texture(gRoughness, TexCoords).r;
-    float metalness = texture(gMetalness, TexCoords).r;
-    float ao = texture(gAO, TexCoords).r;
-    vec2 velocity = texture(gVelocity, TexCoords).rg;
+    vec3 normal = texture(gNormal, TexCoords).rgb;
+    float roughness = texture(gAlbedo, TexCoords).a;
+    float metalness = texture(gNormal, TexCoords).a;
+    float ao = texture(gEffects, TexCoords).r;
+    vec2 velocity = texture(gEffects, TexCoords).gb;
     float depth = texture(gPosition, TexCoords).a;
 
     float ssao = texture(ssao, TexCoords).r;
@@ -74,7 +72,6 @@ void main()
     {
         vec3 V = normalize(- viewPos);
         vec3 N = normalize(normal);
-        vec3 R = reflect(-V, N);
 
         float NdotV = saturate(dot(N, V));
 
@@ -91,7 +88,7 @@ void main()
         vec3 irradiance = texture(envMapIrradiance, getSphericalCoord(N * mat3(view))).rgb;
         diffuse = irradiance * (albedo / PI);
 
-        specular = ApproximateSpecularIBL(F, roughness, N, V);
+        specular = computeApproximateRadiance(F, roughness, N, V);
 
         color = (diffuse * kD) + specular;
     }
@@ -106,7 +103,7 @@ void main()
     else if (gBufferView == 2)
         colorOutput = vec4(viewPos, 1.0f);
 
-    // World Normal buffer
+    // View Normal buffer
     else if (gBufferView == 3)
         colorOutput = vec4(normal, 1.0f);
 
@@ -209,44 +206,55 @@ vec2 getSphericalCoord(vec3 normalCoord)
 }
 
 
-vec2 Hammersley(int i, int N)
+float radicalInverse_VdC(uint bits) // In place of bitfieldreverse()
 {
-  return vec2( float(i) / float(N), float(bitfieldReverse(i)) * 2.3283064365386963e-10 );
+     bits = (bits << 16u) | (bits >> 16u);
+     bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+     bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+     bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+     bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+     return float(bits) * 2.3283064365386963e-10;
+}
+
+
+vec2 Hammersley(uint i, uint N)
+{
+    return vec2(float(i)/float(N), radicalInverse_VdC(i));
 }
 
 
 vec3 ImportanceSampleGGX(vec2 Xi, float roughness, vec3 N)
 {
-    float a = roughness * roughness;
+    float alpha = roughness * roughness;
 
     float Phi = 2 * PI * Xi.x;
-    float CosTheta = sqrt((1.0f - Xi.y) / (1.0f + (a*a - 1.0f) * Xi.y));
-    float SinTheta = sqrt(1.0f - CosTheta * CosTheta);
+    float cosT = sqrt((1.0f - Xi.y) / (1.0f + (alpha * alpha - 1.0f) * Xi.y));
+    float sinT = sqrt(1.0f - cosT * cosT);
 
     vec3 H;
-    H.x = SinTheta * cos(Phi);
-    H.y = SinTheta * sin(Phi);
-    H.z = CosTheta;
+    H.x = sinT * cos(Phi);
+    H.y = sinT * sin(Phi);
+    H.z = cosT;
 
-    vec3 UpVector = abs(N.z) < 0.999f ? vec3(0.0f, 0.0f, 1.0f) : vec3(1.0f, 0.0f, 0.0f);
-    vec3 TangentX = normalize(cross(UpVector, N));
-    vec3 TangentY = cross(N, TangentX);
+    vec3 vecUp = abs(N.z) < 0.999f ? vec3(0.0f, 0.0f, 1.0f) : vec3(1.0f, 0.0f, 0.0f);
+    vec3 tanX = normalize(cross(vecUp, N));
+    vec3 tanY = cross(N, tanX);
 
-    return normalize(TangentX * H.x + TangentY * H.y + N * H.z);
+    return normalize(tanX * H.x + tanY * H.y + N * H.z);
 }
 
 
-vec3 PrefilterEnvMap(float roughness, vec3 R)
+vec3 prefilterEnvMap(float roughness, vec3 R)
 {
     vec3 N = R;
     vec3 V = R;
     vec3 prefilteredColor = vec3(0.0f);
-    int NumSamples = brdfMaxSamples;
+    uint numSamples = brdfMaxSamples;
     float totalWeight = 0.0f;
 
-    for(int i = 0; i < NumSamples; i++)
+    for(uint i = 0; i < numSamples; i++)
     {
-        vec2 Xi = Hammersley(i, NumSamples);
+        vec2 Xi = Hammersley(i, numSamples);
         vec3 H = ImportanceSampleGGX(Xi, roughness, N);
         vec3 L = 2 * dot(V, H) * H - V;
 
@@ -263,23 +271,22 @@ vec3 PrefilterEnvMap(float roughness, vec3 R)
 }
 
 
-vec2 IntegrateBRDF(float roughness, float NdotV)
+vec2 integrateBRDF(float roughness, float NdotV)
 {
     vec3 V;
-    V.x = sqrt( 1.0f - NdotV * NdotV );
-    V.y = 0;
+    V.x = sqrt(1.0f - NdotV * NdotV);
+    V.y = 0.0f;
     V.z = NdotV;
 
-    float A = 0;
-    float B = 0;
-    int NumSamples = brdfMaxSamples;
+    float A = 0.0f;
+    float B = 0.0f;
+    uint numSamples = brdfMaxSamples;
 
     vec3 N = vec3(0.0f, 0.0f, 1.0f);
 
-
-    for(int i = 0; i < NumSamples; i++)
+    for(uint i = 0; i < numSamples; i++)
     {
-        vec2 Xi = Hammersley(i, NumSamples);
+        vec2 Xi = Hammersley(i, numSamples);
         vec3 H = ImportanceSampleGGX(Xi, roughness, N);
         vec3 L = normalize(2 * dot(V, H) * H - V);
 
@@ -298,16 +305,17 @@ vec2 IntegrateBRDF(float roughness, float NdotV)
         }
     }
 
-    return vec2(A, B) / NumSamples;
+    return vec2(A, B) / numSamples;
 }
 
 
-vec3 ApproximateSpecularIBL(vec3 specularColor, float roughness, vec3 N, vec3 V)
+vec3 computeApproximateRadiance(vec3 specularColor, float roughness, vec3 N, vec3 V)
 {
     float NdotV = saturate(dot(N, V));
-    vec3 R = 2 * dot( V, N ) * N - V;
-    vec3 PrefilteredColor = PrefilterEnvMap(roughness, R);
-    vec2 EnvBRDF = IntegrateBRDF(roughness, NdotV);
+    vec3 R = 2.0f * dot(V, N) * N - V;
 
-    return PrefilteredColor * (specularColor * EnvBRDF.x + EnvBRDF.y);
+    vec3 prefilteredColor = prefilterEnvMap(roughness, R);
+    vec2 envBRDF = integrateBRDF(roughness, NdotV);
+
+    return prefilteredColor * (specularColor * envBRDF.x + envBRDF.y);
 }
