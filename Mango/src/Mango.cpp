@@ -43,6 +43,7 @@ void imGuiSetup();
 void gBufferSetup();
 void ssaoSetup();
 void screenQuad();
+void iblSetup();
 
 GLfloat lerp(GLfloat x, GLfloat y, GLfloat a);
 
@@ -51,14 +52,17 @@ GLuint WIDTH = 1280;
 GLuint HEIGHT = 720;
 
 GLuint screenQuadVAO, screenQuadVBO;
-GLuint gBuffer, zBuffer, gPosition, gNormal, gAlbedo, gRoughness, gMetalness, gAO;
+GLuint gBuffer, zBuffer, gPosition, gNormal, gAlbedo, gRoughness, gMetalness, gAO, gVelocity;
 GLuint ssaoFBO, ssaoBlurFBO, ssaoBuffer, ssaoBlurBuffer, noiseTexture;
 GLuint postprocessFBO, postprocessBuffer;
+GLuint prefilterFBO, integrateFBO, prefilterBuffer, integrateBuffer;
 
 GLint gBufferView = 1;
 GLint ssaoKernelSize = 32;
 GLint ssaoNoiseSize = 4;
 GLint ssaoBlurSize = 4;
+GLint motionBlurMaxSamples = 20;
+GLint brdfMaxSamples = 32;
 
 GLfloat lastX = WIDTH / 2;
 GLfloat lastY = HEIGHT / 2;
@@ -70,12 +74,13 @@ GLfloat deltaSSAOTime = 0.0f;
 GLfloat deltaPostprocessTime = 0.0f;
 GLfloat deltaForwardTime = 0.0f;
 GLfloat deltaGUITime = 0.0f;
-GLfloat materialRoughness = 0.5f;
-GLfloat materialMetallicity = 0.0f;
+GLfloat materialRoughness = 0.01f;
+GLfloat materialMetallicity = 0.02f;
 GLfloat ambientIntensity = 0.01f;
 GLfloat ssaoRadius = 1.0f;
 GLfloat ssaoPower = 1.0f;
 GLfloat ssaoBias = 0.025f;
+
 GLfloat lightPointRadius1 = 3.0f;
 GLfloat lightPointRadius2 = 3.0f;
 GLfloat lightPointRadius3 = 3.0f;
@@ -85,6 +90,7 @@ GLfloat cameraISO = 1000.0f;
 
 bool cameraMode;
 bool ssaoMode = false;
+bool motionBlurMode = false;
 bool fxaaMode = false;
 bool screenMode = false;
 bool firstMouse = true;
@@ -103,6 +109,9 @@ glm::vec3 lightPointColor2 = glm::vec3(1.0f);
 glm::vec3 lightPointColor3 = glm::vec3(1.0f);
 glm::vec3 lightDirectionalColor1 = glm::vec3(1.0f);
 
+glm::mat4 projViewModel;
+glm::mat4 prevProjViewModel = projViewModel;
+
 std::vector<const char*> cubeFaces;
 std::vector<glm::vec3> ssaoKernel;
 std::vector<glm::vec3> ssaoNoise;
@@ -110,11 +119,12 @@ std::vector<glm::vec3> ssaoNoise;
 Camera camera(glm::vec3(0.0f, 0.0f, 4.0f));
 
 MyShader gBufferShader;
-MyShader velocityShader;
 MyShader lampShader;
 MyShader pointBRDFShader;
 MyShader directionalBRDFShader;
 MyShader environmentBRDFShader;
+MyShader prefilterBRDFShader;
+MyShader integrateBRDFShader;
 MyShader ssaoShader;
 MyShader ssaoBlurShader;
 MyShader firstpassShader;
@@ -124,7 +134,9 @@ Texture ironNormal;
 Texture ironRoughness;
 Texture ironMetalness;
 Texture ironAO;
-Texture skyboxHDR;
+Texture appartHDR;
+Texture appartIrradianceHDR;
+Texture brdfLUT;
 
 Material pbrMat;
 
@@ -188,17 +200,19 @@ int main(int argc, char* argv[])
     ironRoughness.setTexture("resource/textures/pbr/rustediron/rustediron_roughness.png", "ironRoughness", true);
     ironMetalness.setTexture("resource/textures/pbr/rustediron/rustediron_metalness.png", "ironMetalness", true);
     ironAO.setTexture("resource/textures/pbr/rustediron/rustediron_ao.png", "ironAO", true);
-    skyboxHDR.setTextureHDR("resource/textures/hdr/pisa.hdr", "skyboxHDR", true);
+    appartHDR.setTextureHDR("resource/textures/hdr/appart.hdr", "appartHDR", true);
+    appartIrradianceHDR.setTextureHDR("resource/textures/hdr/appart_irradiance.hdr", "appartIrradianceHDR", true);
 
     // Shader
 
     gBufferShader.setShader("resource/shaders/gbuffer.vert", "resource/shaders/gbuffer.frag");
-    velocityShader.setShader("resource/shaders/velocity.vert", "resource/shaders/velocity.frag");
 
     lampShader.setShader("resource/shaders/lighting/light.vert", "resource/shaders/lighting/light.frag");
     pointBRDFShader.setShader("resource/shaders/lighting/pointbrdf.vert", "resource/shaders/lighting/pointbrdf.frag");
     directionalBRDFShader.setShader("resource/shaders/lighting/directionalbrdf.vert", "resource/shaders/lighting/directionalbrdf.frag");
-    environmentBRDFShader.setShader("resource/shaders/lighting/enviromentbrdf.vert", "resource/shaders/lighting/enviromentbrdf.frag");
+    environmentBRDFShader.setShader("resource/shaders/lighting/ibl/enviromentbrdf.vert", "resource/shaders/lighting/ibl/enviromentbrdf.frag");
+    prefilterBRDFShader.setShader("resource/shaders/lighting/ibl/enviromentbrdf.vert", "resource/shaders/lighting/ibl/prefilterbrdf.frag");
+    integrateBRDFShader.setShader("resource/shaders/lighting/ibl/enviromentbrdf.vert", "resource/shaders/lighting/ibl/integratebrdf.frag");
 
     ssaoShader.setShader("resource/shaders/postprocess/ssao.vert", "resource/shaders/postprocess/ssao.frag");
     ssaoBlurShader.setShader("resource/shaders/postprocess/ssao.vert", "resource/shaders/postprocess/ssaoblur.frag");
@@ -233,8 +247,9 @@ int main(int argc, char* argv[])
     glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gRoughness"), 3);
     glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gMetalness"), 4);
     glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gAO"), 5);
-    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "ssao"), 6);
-    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "envMap"), 7);
+    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gVelocity"), 6);
+    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "ssao"), 7);
+    glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "envMap"), 8);
 
     directionalBRDFShader.useShader();
     glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gPosition"), 0);
@@ -253,8 +268,23 @@ int main(int argc, char* argv[])
     glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gRoughness"), 3);
     glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gMetalness"), 4);
     glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gAO"), 5);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "ssao"), 6);
-    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "envMap"), 7);
+    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gVelocity"), 6);
+    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "ssao"), 7);
+    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "envMap"), 8);
+    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "envMapIrradiance"), 9);
+    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "envMapPrefilter"), 10);
+    glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "brdfLUT"), 11);
+
+    prefilterBRDFShader.useShader();
+    glUniform1i(glGetUniformLocation(prefilterBRDFShader.Program, "gPosition"), 0);
+    glUniform1i(glGetUniformLocation(prefilterBRDFShader.Program, "gNormal"), 1);
+    glUniform1i(glGetUniformLocation(prefilterBRDFShader.Program, "gRoughness"), 2);
+    glUniform1i(glGetUniformLocation(prefilterBRDFShader.Program, "envMap"), 3);
+
+    integrateBRDFShader.useShader();
+    glUniform1i(glGetUniformLocation(integrateBRDFShader.Program, "gPosition"), 0);
+    glUniform1i(glGetUniformLocation(integrateBRDFShader.Program, "gNormal"), 1);
+    glUniform1i(glGetUniformLocation(integrateBRDFShader.Program, "gRoughness"), 2);
 
     ssaoShader.useShader();
     glUniform1i(glGetUniformLocation(ssaoShader.Program, "gPosition"), 0);
@@ -263,6 +293,7 @@ int main(int argc, char* argv[])
 
     firstpassShader.useShader();
     glUniform1i(glGetUniformLocation(firstpassShader.Program, "ssao"), 1);
+    glUniform1i(glGetUniformLocation(firstpassShader.Program, "gVelocity"), 2);
 
     // Setup
     // --------------------------------------------------------------
@@ -275,11 +306,15 @@ int main(int argc, char* argv[])
 
 
     // Post-processing setup
-    glm::mat4 prevProjection;
-    glm::mat4 prevView;
-    glm::mat4 prevModel;
+    
 
     postprocessSetup();
+
+
+    //----------
+    // IBL setup
+    //----------
+    iblSetup();
     // --------------------------------------------------------------
 
     // Queries setting for profiling
@@ -342,9 +377,11 @@ int main(int argc, char* argv[])
         model = glm::translate(model, glm::vec3(0.0f));
         model = glm::rotate(model, rotationAngle, glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+        projViewModel = projection * view * model;
+
+        glUniformMatrix4fv(glGetUniformLocation(gBufferShader.Program, "projViewModel"), 1, GL_FALSE, glm::value_ptr(projViewModel));
+        glUniformMatrix4fv(glGetUniformLocation(gBufferShader.Program, "prevProjViewModel"), 1, GL_FALSE, glm::value_ptr(prevProjViewModel));
         glUniformMatrix4fv(glGetUniformLocation(gBufferShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(glGetUniformLocation(gBufferShader.Program, "modelViewProj"), 1, GL_FALSE, glm::value_ptr(model * view * projection));
-        glUniformMatrix4fv(glGetUniformLocation(gBufferShader.Program, "prevModelViewProj"), 1, GL_FALSE, glm::value_ptr(prevModel * prevView * prevProjection));
         glUniform3f(glGetUniformLocation(gBufferShader.Program, "albedoColor"), albedoColor.r, albedoColor.g, albedoColor.b);
 
         glActiveTexture(GL_TEXTURE0);
@@ -367,6 +404,8 @@ int main(int argc, char* argv[])
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glQueryCounter(queryIDGeometry[1], GL_TIMESTAMP);
+
+        prevProjViewModel = projViewModel;
 
         // SSAO rendering
         glQueryCounter(queryIDSSAO[0], GL_TIMESTAMP);
@@ -424,52 +463,52 @@ int main(int argc, char* argv[])
         glBindFramebuffer(GL_FRAMEBUFFER, postprocessFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        pointBRDFShader.useShader();
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gPosition);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, gNormal);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, gAlbedo);
-        glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, gRoughness);
-        glActiveTexture(GL_TEXTURE4);
-        glBindTexture(GL_TEXTURE_2D, gMetalness);
-        glActiveTexture(GL_TEXTURE5);
-        glBindTexture(GL_TEXTURE_2D, gAO);
-        glActiveTexture(GL_TEXTURE6);
-        glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);
-        glActiveTexture(GL_TEXTURE7);
-        skyboxHDR.useTexture();
-
-        // Point light rendering
-        lightPoint1.setLightPosition(lightPointPosition1);
-        lightPoint2.setLightPosition(lightPointPosition2);
-        lightPoint3.setLightPosition(lightPointPosition3);
-        lightPoint1.setLightColor(glm::vec4(lightPointColor1, 1.0f));
-        lightPoint2.setLightColor(glm::vec4(lightPointColor2, 1.0f));
-        lightPoint3.setLightColor(glm::vec4(lightPointColor3, 1.0f));
-        lightPoint1.setLightRadius(lightPointRadius1);
-        lightPoint2.setLightRadius(lightPointRadius2);
-        lightPoint3.setLightRadius(lightPointRadius3);
-
-        for (int i = 0; i < Light::lightPointList.size(); i++)
-        {
-            Light::lightPointList[i].renderToShader(pointBRDFShader, camera);
-        }
-
-        glUniformMatrix4fv(glGetUniformLocation(pointBRDFShader.Program, "inverseView"), 1, GL_FALSE, glm::value_ptr(glm::transpose(view)));
-        glUniformMatrix4fv(glGetUniformLocation(pointBRDFShader.Program, "inverseProj"), 1, GL_FALSE, glm::value_ptr(glm::inverse(projection)));
-        glUniform3f(glGetUniformLocation(pointBRDFShader.Program, "viewPos"), camera.cameraPosition.x, camera.cameraPosition.y, camera.cameraPosition.z);
-        glUniform1f(glGetUniformLocation(pointBRDFShader.Program, "materialRoughness"), materialRoughness);
-        glUniform1f(glGetUniformLocation(pointBRDFShader.Program, "materialMetallicity"), materialMetallicity);
-        glUniform3f(glGetUniformLocation(pointBRDFShader.Program, "materialF0"), materialF0.r, materialF0.g, materialF0.b);
-        glUniform1f(glGetUniformLocation(pointBRDFShader.Program, "ambientIntensity"), ambientIntensity);
-        glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gBufferView"), gBufferView);
-
-
-
+        //// Point light(s) rendering
+        //pointBRDFShader.useShader();
+        //
+        //glActiveTexture(GL_TEXTURE0);
+        //glBindTexture(GL_TEXTURE_2D, gPosition);
+        //glActiveTexture(GL_TEXTURE1);
+        //glBindTexture(GL_TEXTURE_2D, gNormal);
+        //glActiveTexture(GL_TEXTURE2);
+        //glBindTexture(GL_TEXTURE_2D, gAlbedo);
+        //glActiveTexture(GL_TEXTURE3);
+        //glBindTexture(GL_TEXTURE_2D, gRoughness);
+        //glActiveTexture(GL_TEXTURE4);
+        //glBindTexture(GL_TEXTURE_2D, gMetalness);
+        //glActiveTexture(GL_TEXTURE5);
+        //glBindTexture(GL_TEXTURE_2D, gAO);
+        //glActiveTexture(GL_TEXTURE6);
+        //glBindTexture(GL_TEXTURE_2D, gVelocity);
+        //glActiveTexture(GL_TEXTURE7);
+        //glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);
+        //glActiveTexture(GL_TEXTURE8);
+        //appartHDR.useTexture();
+        //
+        //lightPoint1.setLightPosition(lightPointPosition1);
+        //lightPoint2.setLightPosition(lightPointPosition2);
+        //lightPoint3.setLightPosition(lightPointPosition3);
+        //lightPoint1.setLightColor(glm::vec4(lightPointColor1, 1.0f));
+        //lightPoint2.setLightColor(glm::vec4(lightPointColor2, 1.0f));
+        //lightPoint3.setLightColor(glm::vec4(lightPointColor3, 1.0f));
+        //lightPoint1.setLightRadius(lightPointRadius1);
+        //lightPoint2.setLightRadius(lightPointRadius2);
+        //lightPoint3.setLightRadius(lightPointRadius3);
+        //
+        //for(int i = 0; i < Light::lightPointList.size(); i++)
+        //{
+        //    Light::lightPointList[i].renderToShader(pointBRDFShader, camera);
+        //}
+        //
+        //glUniformMatrix4fv(glGetUniformLocation(pointBRDFShader.Program, "inverseView"), 1, GL_FALSE, glm::value_ptr(glm::transpose(view)));
+        //glUniformMatrix4fv(glGetUniformLocation(pointBRDFShader.Program, "inverseProj"), 1, GL_FALSE, glm::value_ptr(glm::inverse(projection)));
+        //glUniform1f(glGetUniformLocation(pointBRDFShader.Program, "materialRoughness"), materialRoughness);
+        //glUniform1f(glGetUniformLocation(pointBRDFShader.Program, "materialMetallicity"), materialMetallicity);
+        //glUniform3f(glGetUniformLocation(pointBRDFShader.Program, "materialF0"), materialF0.r, materialF0.g, materialF0.b);
+        //glUniform1f(glGetUniformLocation(pointBRDFShader.Program, "ambientIntensity"), ambientIntensity);
+        //glUniform1i(glGetUniformLocation(pointBRDFShader.Program, "gBufferView"), gBufferView);
+        //
+        //// Directional light(s) rendering
         //directionalBRDFShader.useShader();
         //
         //glActiveTexture(GL_TEXTURE0);
@@ -486,7 +525,8 @@ int main(int argc, char* argv[])
         //glBindTexture(GL_TEXTURE_2D, gAO);
         //glActiveTexture(GL_TEXTURE6);
         //glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);
-        //glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);
+        //glActiveTexture(GL_TEXTURE7);
+        //appartHDR.useTexture();
         //
         //lightDirectional1.setLightColor(glm::vec4(lightDirectionalColor1, 1.0f));
         //
@@ -495,18 +535,54 @@ int main(int argc, char* argv[])
         //    Light::lightDirectionalList[i].renderToShader(directionalBRDFShader, camera);
         //}
         //
-        //
-        //glUniformMatrix4fv(glGetUniformLocation(directionalBRDFShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        //glUniformMatrix4fv(glGetUniformLocation(directionalBRDFShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        //
-        //
-        //glUniform3f(glGetUniformLocation(directionalBRDFShader.Program, "viewPos"), camera.cameraPosition.x, camera.cameraPosition.y, camera.cameraPosition.z);
+        //glUniformMatrix4fv(glGetUniformLocation(environmentBRDFShader.Program, "inverseView"), 1, GL_FALSE, glm::value_ptr(glm::transpose(view)));
+        //glUniformMatrix4fv(glGetUniformLocation(environmentBRDFShader.Program, "inverseProj"), 1, GL_FALSE, glm::value_ptr(glm::inverse(projection)));
         //glUniform1f(glGetUniformLocation(directionalBRDFShader.Program, "materialRoughness"), materialRoughness);
         //glUniform1f(glGetUniformLocation(directionalBRDFShader.Program, "materialMetallicity"), materialMetallicity);
         //glUniform3f(glGetUniformLocation(directionalBRDFShader.Program, "materialF0"), materialF0.r, materialF0.g, materialF0.b);
         //glUniform1f(glGetUniformLocation(directionalBRDFShader.Program, "ambientIntensity"), ambientIntensity);
         //glUniform1i(glGetUniformLocation(directionalBRDFShader.Program, "gBufferView"), gBufferView);
-        //glUniform1f(glGetUniformLocation(directionalBRDFShader.Program, "ssaoVisibility"), ssaoVisibility);
+
+
+
+        // Environment light rendering
+        environmentBRDFShader.useShader();
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gPosition);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, gNormal);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, gAlbedo);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, gRoughness);
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, gMetalness);
+        glActiveTexture(GL_TEXTURE5);
+        glBindTexture(GL_TEXTURE_2D, gAO);
+        glActiveTexture(GL_TEXTURE6);
+        glBindTexture(GL_TEXTURE_2D, gVelocity);
+        glActiveTexture(GL_TEXTURE7);
+        glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);
+        glActiveTexture(GL_TEXTURE8);
+        appartHDR.useTexture();
+        glActiveTexture(GL_TEXTURE9);
+        appartIrradianceHDR.useTexture();
+        glActiveTexture(GL_TEXTURE10);
+        glBindTexture(GL_TEXTURE_2D, prefilterBuffer);
+        glActiveTexture(GL_TEXTURE11);
+        glBindTexture(GL_TEXTURE_2D, integrateBuffer);
+
+        glUniformMatrix4fv(glGetUniformLocation(environmentBRDFShader.Program, "inverseView"), 1, GL_FALSE, glm::value_ptr(glm::transpose(view)));
+        glUniformMatrix4fv(glGetUniformLocation(environmentBRDFShader.Program, "inverseProj"), 1, GL_FALSE, glm::value_ptr(glm::inverse(projection)));
+        glUniformMatrix4fv(glGetUniformLocation(environmentBRDFShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniform1f(glGetUniformLocation(environmentBRDFShader.Program, "materialRoughness"), materialRoughness);
+        glUniform1f(glGetUniformLocation(environmentBRDFShader.Program, "materialMetallicity"), materialMetallicity);
+        glUniform3f(glGetUniformLocation(environmentBRDFShader.Program, "materialF0"), materialF0.r, materialF0.g, materialF0.b);
+        glUniform1f(glGetUniformLocation(environmentBRDFShader.Program, "ambientIntensity"), ambientIntensity);
+        glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "gBufferView"), gBufferView);
+        glUniform1i(glGetUniformLocation(environmentBRDFShader.Program, "brdfMaxSamples"), brdfMaxSamples);
+
         screenQuad();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glQueryCounter(queryIDLighting[1], GL_TIMESTAMP);
@@ -520,17 +596,22 @@ int main(int argc, char* argv[])
         
         firstpassShader.useShader();
         glUniform1i(glGetUniformLocation(firstpassShader.Program, "gBufferView"), gBufferView);
+        glUniform2f(glGetUniformLocation(firstpassShader.Program, "screenTextureSize"), 1.0f / WIDTH, 1.0f / HEIGHT);
         glUniform1f(glGetUniformLocation(firstpassShader.Program, "cameraAperture"), cameraAperture);
         glUniform1f(glGetUniformLocation(firstpassShader.Program, "cameraShutterSpeed"), cameraShutterSpeed);
         glUniform1f(glGetUniformLocation(firstpassShader.Program, "cameraISO"), cameraISO);
         glUniform1i(glGetUniformLocation(firstpassShader.Program, "ssaoMode"), ssaoMode);
         glUniform1i(glGetUniformLocation(firstpassShader.Program, "fxaaMode"), fxaaMode);
-        glUniform2f(glGetUniformLocation(firstpassShader.Program, "screenTextureSize"), 1.0f / WIDTH, 1.0f / HEIGHT);
+        glUniform1i(glGetUniformLocation(firstpassShader.Program, "motionBlurMode"), motionBlurMode);
+        glUniform1f(glGetUniformLocation(firstpassShader.Program, "motionBlurScale"), int(ImGui::GetIO().Framerate) / 60.0f);
+        glUniform1i(glGetUniformLocation(firstpassShader.Program, "motionBlurMaxSamples"), motionBlurMaxSamples);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, postprocessBuffer);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, ssaoBlurBuffer);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, gVelocity);
         
         screenQuad();
         glQueryCounter(queryIDPostprocess[1], GL_TIMESTAMP);
@@ -545,17 +626,17 @@ int main(int argc, char* argv[])
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // Shape(s) rendering
-        lampShader.useShader();
-        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-
-        for (int i = 0; i < Light::lightPointList.size(); i++)
-        {
-            glUniform4f(glGetUniformLocation(lampShader.Program, "lightColor"), Light::lightPointList[i].getLightColor().r, Light::lightPointList[i].getLightColor().g, Light::lightPointList[i].getLightColor().b, Light::lightPointList[i].getLightColor().a);
-
-            if (Light::lightPointList[i].isMesh())
-                Light::lightPointList[i].lightMesh.drawShape(lampShader, view, projection, camera);
-        }
+        //lampShader.useShader();
+        //glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        //glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        //
+        //for (int i = 0; i < Light::lightPointList.size(); i++)
+        //{
+        //    glUniform4f(glGetUniformLocation(lampShader.Program, "lightColor"), Light::lightPointList[i].getLightColor().r, Light::lightPointList[i].getLightColor().g, Light::lightPointList[i].getLightColor().b, Light::lightPointList[i].getLightColor().a);
+        //
+        //    if (Light::lightPointList[i].isMesh())
+        //        Light::lightPointList[i].lightMesh.drawShape(lampShader, view, projection, camera);
+        //}
         glQueryCounter(queryIDForward[1], GL_TIMESTAMP);
 
 
@@ -644,6 +725,7 @@ void imGuiSetup()
             ImGui::SliderFloat("Metalness", &materialMetallicity, 0.0f, 1.0f);
             ImGui::SliderFloat3("F0", (float*)&materialF0, 0.0f, 1.0f);
             ImGui::SliderFloat("Ambient Intensity", &ambientIntensity, 0.0f, 1.0f);
+            ImGui::SliderInt("BRDF Max Samples", &brdfMaxSamples, 1, 1024);
 
             ImGui::TreePop();
         }
@@ -699,6 +781,14 @@ void imGuiSetup()
             if (ImGui::TreeNode("FXAA"))
             {
                 ImGui::Checkbox("Enable", &fxaaMode);
+
+                ImGui::TreePop();
+            }
+
+            if (ImGui::TreeNode("Motion Blur"))
+            {
+                ImGui::Checkbox("Enable", &motionBlurMode);
+                ImGui::SliderInt("Max Samples", &motionBlurMaxSamples, 1, 128);
 
                 ImGui::TreePop();
             }
@@ -812,9 +902,17 @@ void gBufferSetup()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, gAO, 0);
 
+    // Velocity
+    glGenTextures(1, &gVelocity);
+    glBindTexture(GL_TEXTURE_2D, gVelocity);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, GL_TEXTURE_2D, gVelocity, 0);
+
     // Define the COLOR_ATTACHMENTS for the G-Buffer
-    GLuint attachments[6] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5 };
-    glDrawBuffers(6, attachments);
+    GLuint attachments[7] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6 };
+    glDrawBuffers(7, attachments);
 
     // Z-Buffer
     glGenRenderbuffers(1, &zBuffer);
@@ -955,6 +1053,77 @@ GLfloat lerp(GLfloat x, GLfloat y, GLfloat a)
     return x + a * (y - x);
 }
 
+void iblSetup()
+{
+    // Prefilter Buffer
+    glGenFramebuffers(1, &prefilterFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, prefilterFBO);
+    glGenTextures(1, &prefilterBuffer);
+    glBindTexture(GL_TEXTURE_2D, prefilterBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prefilterBuffer, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "Prefilter Framebuffer not complete !" << std::endl;
+
+    // Integrate BRDF Buffer
+    glGenFramebuffers(1, &integrateFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, integrateFBO);
+    glGenTextures(1, &integrateBuffer);
+    glBindTexture(GL_TEXTURE_2D, integrateBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, integrateBuffer, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "Integrate BRDF Framebuffer not complete !" << std::endl;
+
+    //-------------------------
+    // Prefilter/integrate BDRF
+    //-------------------------
+    // Prefilter
+    glBindFramebuffer(GL_FRAMEBUFFER, prefilterFBO);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    prefilterBRDFShader.useShader();
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, gPosition);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, gNormal);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, gRoughness);
+    glActiveTexture(GL_TEXTURE3);
+    appartHDR.useTexture();
+
+    //glUniform1f(glGetUniformLocation(prefilterBRDFShader.Program, "materialRoughness"), materialRoughness);
+    //glUniformMatrix4fv(glGetUniformLocation(prefilterBRDFShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+
+    //screenQuad();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Integrate
+    glBindFramebuffer(GL_FRAMEBUFFER, integrateFBO);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    integrateBRDFShader.useShader();
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, gPosition);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, gNormal);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, gRoughness);
+
+    //glUniform1f(glGetUniformLocation(integrateBRDFShader.Program, "materialRoughness"), materialRoughness);
+    //glUniformMatrix4fv(glGetUniformLocation(integrateBRDFShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+
+    //screenQuad();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
 
 //---------------
@@ -1007,6 +1176,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
     if (keys[GLFW_KEY_8])
         gBufferView = 8;
+
+    if (keys[GLFW_KEY_9])
+        gBufferView = 9;
 
     if (key >= 0 && key < 1024)
     {

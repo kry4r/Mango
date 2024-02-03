@@ -3,22 +3,26 @@
 in vec2 TexCoords;
 out vec4 colorOutput;
 
+float FXAA_SPAN_MAX = 8.0f;
+float FXAA_REDUCE_MUL = 1.0f/8.0f;
+float FXAA_REDUCE_MIN = 1.0f/128.0f;
 float middleGrey = 0.18f;
 
 uniform sampler2D screenTexture;
 uniform sampler2D ssao;
+uniform sampler2D gVelocity;
 
 uniform int gBufferView;
+uniform int motionBlurMaxSamples;
 uniform bool ssaoMode;
 uniform bool fxaaMode;
+uniform bool motionBlurMode;
 uniform float cameraAperture;
 uniform float cameraShutterSpeed;
 uniform float cameraISO;
+uniform float motionBlurScale;
 uniform vec2 screenTextureSize;
 
-float FXAA_SPAN_MAX = 8.0f;
-float FXAA_REDUCE_MUL = 1.0f/8.0f;
-float FXAA_REDUCE_MIN = 1.0f/128.0f;
 
 vec3 colorLinear(vec3 colorVector);
 vec3 colorSRGB(vec3 colorVector);
@@ -37,6 +41,25 @@ void main()
             color = computeFxaa();  // Don't know if applying FXAA first is a good idea, especially with effects such as motion blur and DoF...
         else
             color = texture(screenTexture, TexCoords).rgb;
+
+        if(motionBlurMode)
+        {
+            vec2 texelSize = 1.0f / vec2(textureSize(screenTexture, 0));
+
+            vec2 velocity = texture(gVelocity, TexCoords).rg;
+            velocity *= motionBlurScale;
+
+            float fragSpeed = length(velocity / texelSize);
+            int numSamples = clamp(int(fragSpeed), 1, motionBlurMaxSamples);
+
+            for (int i = 1; i < numSamples; ++i)
+            {
+                vec2 blurOffset = velocity * (float(i) / float(numSamples - 1) - 0.5f);
+                color += texture(screenTexture, TexCoords + blurOffset).rgb;
+            }
+
+            color /= float(numSamples);
+        }
 
         if(ssaoMode)
         {
