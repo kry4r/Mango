@@ -84,7 +84,7 @@ void main()
         vec3 kD = vec3(1.0f) - kS;
         kD *= 1.0f - metalness;
 
-        // Irradiance computation
+        // Diffuse irradiance computation
         vec3 irradiance = texture(envMapIrradiance, getSphericalCoord(N * mat3(view))).rgb;
         diffuse = irradiance * (albedo / PI);
 

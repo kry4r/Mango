@@ -27,6 +27,7 @@ uniform sampler2D ssao;
 uniform sampler2D envMap;
 
 uniform int gBufferView;
+uniform int attenuationMode;
 uniform float materialRoughness;
 uniform float materialMetallicity;
 uniform float ambientIntensity;
@@ -77,7 +78,7 @@ void main()
         vec3 R = normalize(reflect(- V, N));
 
         // Ambient component computation
-        vec3 ambient = ao * albedo * vec3(ambientIntensity);    // While we don't have IBL...
+        vec3 ambient = ao * albedo * vec3(ambientIntensity);
 
         // Light source independent BRDF term(s)
         float NdotV = saturate(dot(N, V));
@@ -98,8 +99,12 @@ void main()
 
             vec3 lightColor = colorLinear(lightPointArray[i].color.rgb);
             float distanceL = length(lightPointArray[i].position - viewPos);
-            // float attenuation = 1.0 / (distanceL * distanceL);    // Quadratic attenuation
-            float attenuation = pow(saturate(1 - pow(distanceL / lightPointArray[i].radius, 4)), 2) / (distanceL * distanceL + 1);    // UE4 attenuation
+            float attenuation;
+
+            if(attenuationMode == 1)
+                attenuation = 1.0 / (distanceL * distanceL);    // Quadratic attenuation
+            else if(attenuationMode == 2)
+                attenuation = pow(saturate(1 - pow(distanceL / lightPointArray[i].radius, 4)), 2) / (distanceL * distanceL + 1); // UE4 attenuation
 
             // Light source dependent BRDF term(s)
             float NdotL = saturate(dot(N, L));

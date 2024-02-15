@@ -32,6 +32,7 @@ vec3 FilmicTM(vec3 color);
 vec3 UnchartedTM(vec3 color);
 float computeSOBExposure(float aperture, float shutterSpeed, float iso);
 vec3 computeFxaa();
+vec3 computeMotionBlur(vec3 colorVector);
 
 
 void main()
@@ -45,24 +46,7 @@ void main()
         else
             color = texture(screenTexture, TexCoords).rgb;
 
-        if(motionBlurMode)
-        {
-            vec2 texelSize = 1.0f / vec2(textureSize(screenTexture, 0));
-
-            vec2 velocity = texture(gEffects, TexCoords).gb;
-            velocity *= motionBlurScale;
-
-            float fragSpeed = length(velocity / texelSize);
-            int numSamples = clamp(int(fragSpeed), 1, motionBlurMaxSamples);
-
-            for (int i = 1; i < numSamples; ++i)
-            {
-                vec2 blurOffset = velocity * (float(i) / float(numSamples - 1) - 0.5f);
-                color += texture(screenTexture, TexCoords + blurOffset).rgb;
-            }
-
-            color /= float(numSamples);
-        }
+        if(motionBlurMode) color = computeMotionBlur(color);
 
         if(ssaoMode)
         {
@@ -73,9 +57,15 @@ void main()
         color *= computeSOBExposure(cameraAperture, cameraShutterSpeed, cameraISO);
 
         if(tonemappingMode == 1)
+        {
             color = ReinhardTM(color);
+            colorOutput = vec4(colorSRGB(color), 1.0f);
+        }
         else if(tonemappingMode == 2)
+        {
             color = FilmicTM(color);
+            colorOutput = vec4(color, 1.0f);
+        }
         else if(tonemappingMode == 3)
         {
             float W = 11.2f;
@@ -83,13 +73,8 @@ void main()
             vec3 whiteScale = 1.0f / UnchartedTM(vec3(W));
 
             color *= whiteScale;
-        }
-
-
-        if(tonemappingMode == 2)
-            colorOutput = vec4(color, 1.0f);
-        else
             colorOutput = vec4(colorSRGB(color), 1.0f);
+        }
 
     }
 
@@ -196,4 +181,23 @@ float computeSOBExposure(float aperture, float shutterSpeed, float iso)
     float lAvg = (1000.0f / 65.0f) * sqrt(aperture) / (iso * shutterSpeed);
 
     return middleGrey / lAvg;
+}
+
+vec3 computeMotionBlur(vec3 colorVector)
+{
+    vec2 texelSize = 1.0f / vec2(textureSize(screenTexture, 0));
+
+    vec2 velocity = texture(gEffects, TexCoords).gb;
+    velocity *= motionBlurScale;
+
+    float fragSpeed = length(velocity / texelSize);
+    int numSamples = clamp(int(fragSpeed), 1, motionBlurMaxSamples);
+
+    for (int i = 1; i < numSamples; ++i)
+    {
+        vec2 blurOffset = velocity * (float(i) / float(numSamples - 1) - 0.5f);
+        colorVector += texture(screenTexture, TexCoords + blurOffset).rgb;
+    }
+
+    return colorVector /= float(numSamples);
 }
