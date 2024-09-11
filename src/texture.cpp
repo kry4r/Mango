@@ -6,7 +6,7 @@
 #include <glad/glad.h>
 
 #include "stb_image.h"
-#include "texture.h"
+#include "texture.hpp"
 
 
 Texture::Texture()

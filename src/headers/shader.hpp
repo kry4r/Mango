@@ -10,16 +10,13 @@
 #include <iostream>
 
 #include <glad/glad.h>
-
-class MyShader
+namespace mango::shader
 {
-public:
-    GLuint Program;
-
-
-    MyShader();
-    ~MyShader();
-    void setShader(const GLchar* vertexPath, const GLchar* fragmentPath);
-    void useShader();
-};
+    struct Shader_GL
+    {
+        GLuint Program;
+        void setShader(const GLchar* vertex_path, const GLchar* fragment_path);
+        void useShader();
+    };
+}
 #endif //MANGO_SHADER_H
