@@ -1,7 +1,2 @@
-Mango/x64/
-Mango/.vs
-Mango/3rdparty/stb/tests/
-Mango/3rdparty/assimp/test/
-Mango/3rdparty/assimp/samples/
-Mango/3rdparty/assimp/port/
-Mango/3rdparty/assimp/build/
+cmake-build-debug/
+.idea/
