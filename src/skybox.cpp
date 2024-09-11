@@ -11,7 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "stb_image.h"
-#include "skybox.h"
+#include "skybox.hpp"
 
 
 Skybox::Skybox()

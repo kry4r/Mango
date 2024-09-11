@@ -17,28 +17,30 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include "mesh.h"
+#include "mesh.hpp"
 
 using namespace std;
 
+namespace mango::model
+{
+    class Model
+    {
+    public:
+        Model();
+        ~Model();
+        auto load_model(std::string path) -> void;
+        auto Draw() -> void;
 
+    private:
+        std::vector<Mesh> meshes;
+        std::string directory;
+
+        auto processNode(aiNode* node, const aiScene* scene) -> void;
+        auto processMesh(aiMesh* mesh, const aiScene* scene) -> Mesh;
+    };
+}
 
 unsigned int TextureFromFile(const char* path, const string& directory, bool gamma = false);
 
-class Model
-{
-public:
-    Model();
-    ~Model();
-    void loadModel(std::string path);
-    void Draw();
-
-private:
-    std::vector<Mesh> meshes;
-    std::string directory;
-
-    void processNode(aiNode* node, const aiScene* scene);
-    Mesh processMesh(aiMesh* mesh, const aiScene* scene);
-};
 
 #endif //MANGO_MODEL_H

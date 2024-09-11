@@ -1,5 +1,4 @@
-#include "camera.h"
-
+#include "camera.hpp"
 Camera::Camera(glm::vec3 position, glm::vec3 up, GLfloat yaw, GLfloat pitch) : cameraFront(glm::vec3(0.0f, 0.0f, -1.0f)),
 cameraSpeed(defaultCameraSpeed),
 cameraSensitivity(defaultCameraSensitivity),
