@@ -1,191 +1,171 @@
 #include "shape.hpp"
 
-
-GLfloat cubeVertices[] =
+namespace mango::model
 {
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
-     0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
+    GLfloat cubeVertices[] =
+        {
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
 
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
 
-    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-    -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-    -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
 
-     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
 
-    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
 
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
-};
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f
+        };
 
+    GLfloat planeVertices[] =
+        {
+            0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f
+        };
 
-GLfloat planeVertices[] =
-{
-     0.5f,  -0.5f,  0.5f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
-     0.5f,  -0.5f,  0.5f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
-     0.5f,  -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f
-};
+    GLfloat triangleVertices[] =
+        {
+            -0.5f, -0.5f, 0.0f,
+            0.5f, -0.5f, 0.0f,
+            0.0f, 0.5f, 0.0f
+        };
 
+    auto Shape::set_shape(ShapeType type, glm::vec3 position) -> void
+    {
+        this->shape_type = type;
+        this->shape_position = position;
+        this->shape_scale = glm::vec3(1.0f, 1.0f, 1.0f);
+        this->shape_angle = 0;
+        this->shape_rotation_axis = glm::vec3(0.0f, 1.0f, 0.0f);
 
-GLfloat triangleVertices[] =
-{
-    -0.5f, -0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
-     0.0f,  0.5f, 0.0f
-};
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 
+        if (type == ShapeType::CUBE)
+            glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+        else if (type == ShapeType::PLANE)
+            glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
 
-Shape::Shape()
-{
+        glBindVertexArray(this->vao);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
+        glBindVertexArray(0);
+    }
 
-}
+    auto Shape::draw_shape(shader::Shader_GL& lighting_shader, glm::mat4& view, glm::mat4& projection, camera::Camera& camera) -> void
+    {
+        lighting_shader.use_shader();
 
-Shape::~Shape()
-{
+        GLint modelLoc = glGetUniformLocation(lighting_shader.Program, "model");
+        GLint viewLoc = glGetUniformLocation(lighting_shader.Program, "view");
+        GLint projLoc = glGetUniformLocation(lighting_shader.Program, "projection");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+        glUniform3f(glGetUniformLocation(lighting_shader.Program, "viewPos"),
+            camera.camera_position.x,
+            camera.camera_position.y,
+            camera.camera_position.z);
 
-}
+        glm::mat4 model;
+        model = glm::translate(model, this->shape_position);
+        model = glm::scale(model, this->shape_scale);
+        model = glm::rotate(model, this->shape_angle, this->shape_rotation_axis);
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
+        glBindVertexArray(this->vao);
+        if (this->shape_type == ShapeType::CUBE)
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        else if (this->shape_type == ShapeType::PLANE)
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+    }
 
-void Shape::setShape(std::string type, glm::vec3 position)
-{
-    this->shapeType = type;
-    this->shapePosition = position;
-    this->shapeScale = glm::vec3(1.0f, 1.0f, 1.0f);
-    this->shapeAngle = 0;
-    this->shapeRotationAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+    auto Shape::get_shape_type() -> ShapeType
+    {
+        return this->shape_type;
+    }
 
-    glGenVertexArrays(1, &shapeVAO);
-    glGenBuffers(1, &shapeVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, this->shapeVBO);
+    auto Shape::get_shape_position() -> glm::vec3
+    {
+        return this->shape_position;
+    }
 
-    if (type == "cube")
-        glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
-    else if (type == "plane")
-        glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
+    auto Shape::get_shape_angle() -> GLfloat
+    {
+        return this->shape_angle;
+    }
 
-    glBindVertexArray(this->shapeVAO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
-    glBindVertexArray(0);
-}
+    auto Shape::get_shape_rotationAxis() -> glm::vec3
+    {
+        return this->shape_rotation_axis;
+    }
 
+    auto Shape::get_shape_scale() -> glm::vec3
+    {
+        return this->shape_scale;
+    }
 
-void Shape::drawShape(MyShader& lightingShader, glm::mat4& view, glm::mat4& projection, Camera& camera)
-{
-    lightingShader.useShader();
+    auto Shape::get_shape_vao() -> GLint
+    {
+        return this->vao;
+    }
 
-    GLint modelLoc = glGetUniformLocation(lightingShader.Program, "model");
-    GLint viewLoc = glGetUniformLocation(lightingShader.Program, "view");
-    GLint projLoc = glGetUniformLocation(lightingShader.Program, "projection");
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-    glUniform3f(glGetUniformLocation(lightingShader.Program, "viewPos"), camera.cameraPosition.x, camera.cameraPosition.y, camera.cameraPosition.z);
+    auto Shape::set_shape_position(glm::vec3 position) -> void
+    {
+        this->shape_position = position;
+    }
 
-    glm::mat4 model;
-    model = glm::translate(model, this->shapePosition);
-    model = glm::scale(model, this->shapeScale);
-    model = glm::rotate(model, this->shapeAngle, this->shapeRotationAxis);
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    auto Shape::set_shape_angle(GLfloat angle) -> void
+    {
+        this->shape_angle = angle;
+    }
 
-    glBindVertexArray(this->shapeVAO);
-    if (this->shapeType == "cube")
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-    else if (this->shapeType == "plane")
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindVertexArray(0);
-}
+    auto Shape::set_shape_rotation_axis(glm::vec3 rotationAxis) -> void
+    {
+        this->shape_rotation_axis = rotationAxis;
+    }
 
-
-std::string Shape::getShapeType()
-{
-    return this->shapeType;
-}
-
-
-glm::vec3 Shape::getShapePosition()
-{
-    return this->shapePosition;
-}
-
-
-GLfloat Shape::getShapeAngle()
-{
-    return this->shapeAngle;
-}
-
-
-glm::vec3 Shape::getShapeRotationAxis()
-{
-    return this->shapeRotationAxis;
-}
-
-
-glm::vec3 Shape::getShapeScale()
-{
-    return this->shapeScale;
-}
-
-
-GLuint Shape::getShapeVAO()
-{
-    return this->shapeVAO;
-}
-
-
-void Shape::setShapePosition(glm::vec3 position)
-{
-    this->shapePosition = position;
-}
-
-
-void Shape::setShapeAngle(GLfloat angle)
-{
-    this->shapeAngle = angle;
-}
-
-
-void Shape::setShapeRotationAxis(glm::vec3 rotationAxis)
-{
-    this->shapeRotationAxis = rotationAxis;
-}
-
-
-void Shape::setShapeScale(glm::vec3 scale)
-{
-    this->shapeScale = scale;
+    auto Shape::set_shape_scale(glm::vec3 scale) -> void
+    {
+        this->shape_scale = scale;
+    }
 }

@@ -1,82 +1,75 @@
 #include "camera.hpp"
-Camera::Camera(glm::vec3 position, glm::vec3 up, GLfloat yaw, GLfloat pitch) : cameraFront(glm::vec3(0.0f, 0.0f, -1.0f)),
-cameraSpeed(defaultCameraSpeed),
-cameraSensitivity(defaultCameraSensitivity),
-cameraFOV(defaultCameraFOV)
+
+namespace mango::camera
 {
-    this->cameraPosition = position;
-    this->worldUp = up;
-    this->cameraYaw = yaw;
-    this->cameraPitch = pitch;
-    this->updateCameraVectors();
-}
-
-
-Camera::~Camera()
-{
-
-}
-
-
-glm::mat4 Camera::GetViewMatrix()
-{
-    return glm::lookAt(this->cameraPosition, this->cameraPosition + this->cameraFront, this->cameraUp);
-}
-
-
-void Camera::keyboardCall(Camera_Movement direction, GLfloat deltaTime)
-{
-    GLfloat cameraVelocity = this->cameraSpeed * deltaTime;
-
-    if (direction == FORWARD)
-        this->cameraPosition += this->cameraFront * cameraVelocity;
-    if (direction == BACKWARD)
-        this->cameraPosition -= this->cameraFront * cameraVelocity;
-    if (direction == LEFT)
-        this->cameraPosition -= this->cameraRight * cameraVelocity;
-    if (direction == RIGHT)
-        this->cameraPosition += this->cameraRight * cameraVelocity;
-}
-
-
-void Camera::mouseCall(GLfloat xoffset, GLfloat yoffset, GLboolean constrainPitch)
-{
-    xoffset *= this->cameraSensitivity;
-    yoffset *= this->cameraSensitivity;
-    this->cameraYaw += xoffset;
-    this->cameraPitch += yoffset;
-
-    if (constrainPitch)
+    Camera::Camera(glm::vec3 position, glm::vec3 up, GLfloat yaw, GLfloat pitch) : camera_front(glm::vec3(0.0f,0.0f,-1.0f)),
+                                                                                   camera_speed(Camera_Data::current()->default_camera_speed),
+                                                                                   camera_sensitivity(Camera_Data::current()->default_camera_sensitivity),
+                                                                                   camera_FOV(Camera_Data::current()->default_camera_FOV)
     {
-        if (this->cameraPitch > 89.0f)
-            this->cameraPitch = 89.0f;
-        if (this->cameraPitch < -89.0f)
-            this->cameraPitch = -89.0f;
+        this->camera_position = position;
+        this->world_up = up;
+        this->camera_yaw = yaw;
+        this->camera_pitch = pitch;
+        this->updateCameraVectors();
     }
 
-    this->updateCameraVectors();
-}
+    glm::mat4 Camera::get_view_matrix()
+    {
+        return glm::lookAt(this->camera_position, this->camera_position + this->camera_front, this->camera_up);
+    }
 
+    auto Camera::keyboard_call(Camera_Movement direction, GLfloat deltaTime) -> void
+    {
+        GLfloat cameraVelocity = this->camera_speed * deltaTime;
 
-void Camera::scrollCall(GLfloat yoffset)
-{
-    if (this->cameraFOV >= glm::radians(1.0f) && this->cameraFOV <= glm::radians(45.0f))
-        this->cameraFOV -= glm::radians(yoffset);
-    if (this->cameraFOV <= glm::radians(1.0f))
-        this->cameraFOV = glm::radians(1.0f);
-    if (this->cameraFOV >= glm::radians(45.0f))
-        this->cameraFOV = glm::radians(45.0f);
-}
+        if (direction == FORWARD)
+            this->camera_position += this->camera_front * cameraVelocity;
+        if (direction == BACKWARD)
+            this->camera_position -= this->camera_front * cameraVelocity;
+        if (direction == LEFT)
+            this->camera_position -= this->camera_right * cameraVelocity;
+        if (direction == RIGHT)
+            this->camera_position += this->camera_right * cameraVelocity;
+    }
 
+    auto Camera::mouseCall(GLfloat xoffset, GLfloat yoffset, GLboolean constrainPitch) -> void
+    {
+        xoffset *= this->camera_sensitivity;
+        yoffset *= this->camera_sensitivity;
+        this->camera_yaw += xoffset;
+        this->camera_pitch += yoffset;
 
-void Camera::updateCameraVectors()
-{
-    glm::vec3 front;
-    front.x = cos(glm::radians(this->cameraYaw)) * cos(glm::radians(this->cameraPitch));
-    front.y = sin(glm::radians(this->cameraPitch));
-    front.z = sin(glm::radians(this->cameraYaw)) * cos(glm::radians(this->cameraPitch));
+        if (constrainPitch)
+        {
+            if (this->camera_pitch > 89.0f)
+                this->camera_pitch = 89.0f;
+            if (this->camera_pitch < -89.0f)
+                this->camera_pitch = -89.0f;
+        }
 
-    this->cameraFront = glm::normalize(front);
-    this->cameraRight = glm::normalize(glm::cross(this->cameraFront, this->worldUp));
-    this->cameraUp = glm::normalize(glm::cross(this->cameraRight, this->cameraFront));
+        this->updateCameraVectors();
+    }
+
+    auto Camera::scrollCall(GLfloat yoffset) -> void
+    {
+        if (this->camera_FOV >= glm::radians(1.0f) && this->camera_FOV <= glm::radians(45.0f))
+            this->camera_FOV -= glm::radians(yoffset);
+        if (this->camera_FOV <= glm::radians(1.0f))
+            this->camera_FOV = glm::radians(1.0f);
+        if (this->camera_FOV >= glm::radians(45.0f))
+            this->camera_FOV = glm::radians(45.0f);
+    }
+
+    auto Camera::updateCameraVectors() -> void
+    {
+        glm::vec3 front;
+        front.x = cos(glm::radians(this->camera_yaw)) * cos(glm::radians(this->camera_pitch));
+        front.y = sin(glm::radians(this->camera_pitch));
+        front.z = sin(glm::radians(this->camera_yaw)) * cos(glm::radians(this->camera_pitch));
+
+        this->camera_front = glm::normalize(front);
+        this->camera_right = glm::normalize(glm::cross(this->camera_front, this->world_up));
+        this->camera_up = glm::normalize(glm::cross(this->camera_right, this->camera_front));
+    }
 }

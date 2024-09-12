@@ -21,8 +21,6 @@ namespace mango::material
         Shader_GL material_shader;
         std::vector<std::tuple<std::string, texture::Texture>> texture_list;
 
-        Material();
-        ~Material();
         auto add_texture(std::string uniform_name, texture::Texture tex) -> void;
         auto set_shader(Shader_GL& shader) -> void;
         auto render_to_shader() -> void;

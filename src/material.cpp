@@ -1,53 +1,41 @@
 #include "material.hpp"
 
-
-Material::Material()
+namespace mango::material
 {
-
-}
-
-
-Material::~Material()
-{
-
-}
-
-
-void Material::addTexture(std::string uniformName, Texture texObj)
-{
-    this->texList.push_back(std::tuple<std::string, Texture>(uniformName, texObj));
-}
-
-
-void Material::setShader(MyShader& shader)
-{
-    this->matShader = shader;
-}
-
-
-void Material::renderToShader()
-{
-    this->matShader.useShader();
-
-    std::cout << "texList Size : " << this->texList.size() << std::endl;
-
-    for (GLuint i = 0; i < this->texList.size(); i++)
+    auto Material::add_texture(std::string uniform_name, texture::Texture tex) -> void
     {
-        std::string currentUniformName = std::get<0>(this->texList[i]);
-        Texture currentTex = std::get<1>(this->texList[i]);
-
-        std::cout << "i : " << i << std::endl;
-        std::cout << "texWidth : " << currentTex.getTexWidth() << std::endl;
-        std::cout << "texHeight : " << currentTex.getTexHeight() << std::endl;
-        std::cout << "texUniformName : " << currentTex.getTexName() << std::endl;
-        std::cout << "ActiveTexture sent : " << GL_TEXTURE0 + i << std::endl;
-
-        glActiveTexture(GL_TEXTURE0 + i);
-        currentTex.useTexture();
-        glUniform1i(glGetUniformLocation(this->matShader.Program, currentUniformName.c_str()), i);
-
-        std::cout << "------" << std::endl;
+        this->texture_list.push_back(std::tuple<std::string, texture::Texture>(uniform_name, tex));
     }
 
-    std::cout << "============" << std::endl;
+    auto Material::set_shader(Shader_GL& shader) -> void
+    {
+        this->material_shader = shader;
+    }
+
+    auto Material::render_to_shader() -> void
+    {
+        this->material_shader.use_shader();
+
+        std::cout << "texture_list Size : " << this->texture_list.size() << std::endl;
+
+        for (GLuint i = 0; i < this->texture_list.size(); i++)
+        {
+            std::string current_uniform = std::get<0>(this->texture_list[i]);
+            texture::Texture current_texure = std::get<1>(this->texture_list[i]);
+
+            std::cout << "i : " << i << std::endl;
+            std::cout << "texWidth : " << current_texure.get_width() << std::endl;
+            std::cout << "texHeight : " << current_texure.get_height() << std::endl;
+            std::cout << "texUniformName : " << current_texure.get_name() << std::endl;
+            std::cout << "ActiveTexture sent : " << GL_TEXTURE0 + i << std::endl;
+
+            glActiveTexture(GL_TEXTURE0 + i);
+            current_texure.use_texture();
+            glUniform1i(glGetUniformLocation(this->material_shader.Program, current_uniform.c_str()), i);
+
+            std::cout << "------" << std::endl;
+        }
+
+        std::cout << "============" << std::endl;
+    }
 }
