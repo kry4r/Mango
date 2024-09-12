@@ -22,9 +22,9 @@ namespace mango::model
 {
     struct Vertex
     {
-        glm::vec3 Position;
-        glm::vec3 Normal;
-        glm::vec2 TexCoords;
+        glm::vec3 position;
+        glm::vec3 normal;
+        glm::vec2 tex_coords;
     };
 
     struct Mesh
@@ -33,7 +33,6 @@ namespace mango::model
         std::vector<GLuint> indices;
 
         Mesh(std::vector<Vertex>& vertices, std::vector<GLuint>& indices);
-        ~Mesh();
         auto draw() -> void;
 
     private:

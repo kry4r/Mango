@@ -28,42 +28,49 @@ namespace mango::light
         DIRECTIONAL
     };
     struct Light;
-    struct Light_Data
+    struct Light_Glob_Data final: core::Singleton<Light_Glob_Data>
     {
-        GLuint point_light_num, directional_light_num;
+        GLuint point_light_num = 0, directional_light_num = 0;
         std::vector<Light> point_lights;
         std::vector<Light> directional_lights;
-
-        friend class core::Singleton<Light_Data>;
     };
+    struct Point_Light
+    {
+        GLuint light_pointID;
+        glm::vec3 position;
+        glm::vec4 color;
+        float radius;
+    };
+
+    struct Directional_Light
+    {
+        GLuint light_directionalID;
+        glm::vec3 direction;
+        glm::vec4 color;
+    };
+
+    struct Light_Data
+    {
+        union {
+            Point_Light point_light;
+            Directional_Light directional_light;
+        };
+        Light_Type light_type;
+    };
+
     struct Light
     {
     public:
-        GLuint light_pointID, light_directional_ID, lightVAO, lightVBO;
+        GLuint lightVAO, lightVBO;
         bool light_to_mesh = false;
-        float light_radius;
-        glm::vec3 light_position;
-        glm::vec3 light_direction;
-        glm::vec4 light_color;
         model::Shape light_mesh;
-        Light_Type light_type;
-
-        Light();
-        ~Light();
-        auto set_light(glm::vec3 position, glm::vec4 color, float radius, bool isMesh) -> void;
-        auto set_light(glm::vec3 direction, glm::vec4 color) -> void;
+        Light_Data data;
+        auto set_light(Light_Data init_data,bool is_mesh) -> void;
         auto render_to_shader(shader::Shader_GL& shader, camera::Camera& camera) -> void;
         auto get_light_type() -> Light_Type;
-        auto get_light_position() -> glm::vec3;
-        auto get_light_direction() -> glm::vec3;
-        auto get_light_color() -> glm::vec4;
-        auto get_light_radius() -> float;
-        auto get_light_id() -> GLuint;
+        auto get_light_data() -> Light_Data;
         auto is_mesh() -> bool;
-        auto set_light_position(glm::vec3 position) -> void;
-        auto set_light_direction(glm::vec3 direction) -> void;
-        auto set_light_color(glm::vec4 color) -> void;
-        auto set_light_radius(float radius) -> void;
+        auto set_light_data(Light_Data change_data) -> void;
     };
 }
 #endif //MANGO_LIGHTOBJECT_H

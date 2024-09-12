@@ -22,7 +22,6 @@ namespace mango::texture
         GLenum type, internel_format, format;
         std::string name;
 
-        Texture();
         ~Texture();
         auto set_texture(const char* path, std::string name, bool flip) -> void;
         auto set_texture_HDR(const char* path, std::string name, bool flip) -> void;
@@ -32,7 +31,6 @@ namespace mango::texture
         auto get_name() -> std::string;
         auto use_texture() -> void;
     };
-
 }
 
 #endif //MANGO_TEXTUREOBJECT_H

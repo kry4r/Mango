@@ -9,7 +9,6 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
-
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -30,11 +29,9 @@ namespace mango::skybox
         GLfloat camera_aperture, camera_shutter_speed, camera_iso;
         texture::Texture envmap;
 
-        Skybox();
-        ~Skybox();
-        auto setSkyboxTexture(const char* texPath) -> void;
-        auto renderToShader(shader::Shader_GL& shader, glm::mat4& projection, glm::mat4& view) -> void;
-        auto setExposure(GLfloat aperture, GLfloat shutter_speed, GLfloat iso) -> void;
+        auto set_skybox_texture(const char* texPath) -> void;
+        auto render_to_shader(shader::Shader_GL& shader, glm::mat4& projection, glm::mat4& view) -> void;
+        auto set_exposure(GLfloat aperture, GLfloat shutter_speed, GLfloat iso) -> void;
     };
 }
 #endif //MANGO_CUBEMAP_H

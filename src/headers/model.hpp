@@ -26,17 +26,15 @@ namespace mango::model
     class Model
     {
     public:
-        Model();
-        ~Model();
         auto load_model(std::string path) -> void;
-        auto Draw() -> void;
+        auto draw() -> void;
 
     private:
         std::vector<Mesh> meshes;
         std::string directory;
 
-        auto processNode(aiNode* node, const aiScene* scene) -> void;
-        auto processMesh(aiMesh* mesh, const aiScene* scene) -> Mesh;
+        auto process_node(aiNode* node, const aiScene* scene) -> void;
+        auto process_mesh(aiMesh* mesh, const aiScene* scene) -> Mesh;
     };
 }
 
