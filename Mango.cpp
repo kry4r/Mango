@@ -90,9 +90,6 @@ namespace mango::core
         GLfloat ssaoPower = 1.0f;
         GLfloat ssaoBias = 0.025f;
 
-        GLfloat lightPointRadius1 = 3.0f;
-        GLfloat lightPointRadius2 = 3.0f;
-        GLfloat lightPointRadius3 = 3.0f;
         GLfloat cameraAperture = 16.0f;
         GLfloat cameraShutterSpeed = 0.5f;
         GLfloat cameraISO = 1000.0f;
@@ -109,12 +106,11 @@ namespace mango::core
 
         glm::vec3 albedoColor = glm::vec3(1.0f);
         glm::vec3 materialF0 = glm::vec3(0.04f);  // UE4 dielectric
-        glm::vec3 lightPointPosition1 = glm::vec3(1.5f, 0.75f, 1.0f);
-        glm::vec3 lightPointPosition2 = glm::vec3(-1.5f, 1.0f, 1.0f);
-        glm::vec3 lightPointPosition3 = glm::vec3(0.0f, 0.75f, -1.2f);
-        glm::vec3 lightPointColor1 = glm::vec3(1.0f);
-        glm::vec3 lightPointColor2 = glm::vec3(1.0f);
-        glm::vec3 lightPointColor3 = glm::vec3(1.0f);
+
+        light::Light_Data point_light1{light::Point_Light{0, glm::vec3(1.5f, 0.75f, 1.0f), glm::vec4(1.0f), 3.0f}, light::Light_Type::POINT};
+        light::Light_Data point_light2{light::Point_Light{1, glm::vec3(-1.5f, 1.0f, 1.0f), glm::vec4(1.0f), 3.0f}, light::Light_Type::POINT};
+        light::Light_Data point_light3{light::Point_Light{2, glm::vec3(0.0f, 0.75f, -1.2f), glm::vec4(1.0f), 3.0f}, light::Light_Type::POINT};
+        light::Light_Data directional_light1{light::Directional_Light{0,glm::vec3(-0.2f, -1.0f, -0.3f), glm::vec4(1.0f)}, light::Light_Type::DIRECTIONAL};
         glm::vec3 lightDirectionalColor1 = glm::vec3(1.0f);
         glm::vec3 modelPosition = glm::vec3(0.0f);
         glm::vec3 modelRotationAxis = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -163,20 +159,20 @@ namespace mango::core
 
         skybox::Skybox skyboxEnv;
     };
-    //static void error_callback(int error, const char* description);
-    //void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
-    //void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-    //void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-    //void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-//
-    //// Functions prototypes
-    //void cameraMove();
-    //void postprocessSetup();
-    //void imGuiSetup();
-    //void gBufferSetup();
-    //void ssaoSetup();
-    //void screenQuad();
-    //void iblSetup();
+    static void error_callback(int error, const char* description);
+    void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
+    void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+    void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+    void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+
+    // Functions prototypes
+    void cameraMove();
+    void postprocessSetup();
+    void imGuiSetup();
+    void gBufferSetup();
+    void ssaoSetup();
+    void screenQuad();
+    void iblSetup();
 }
 
 static void glfw_error_callback(int error, const char* description)
@@ -228,32 +224,137 @@ int main(int, char**)
     ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, "#canvas");
 #endif
     ImGui_ImplOpenGL3_Init(glsl_version);
-    //glfwSetKeyCallback(window, mango::core::key_callback);
-    //glfwSetCursorPosCallback(window, mango::core::mouse_callback);
-    //glfwSetMouseButtonCallback(window, mango::core::mouse_button_callback);
-    //glfwSetScrollCallback(window, mango::core::scroll_callback);
-
-    // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-    // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
-    // - Read 'docs/FONTS.md' for more instructions and details.
-    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
-    //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
-    //IM_ASSERT(font != nullptr);
+    glfwSetKeyCallback(window, mango::core::key_callback);
+    glfwSetCursorPosCallback(window, mango::core::mouse_callback);
+    glfwSetMouseButtonCallback(window, mango::core::mouse_button_callback);
+    glfwSetScrollCallback(window, mango::core::scroll_callback);
 
     // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+    mango::core::Global_Data::current()->objectAlbedo.set_texture("resource/textures/pbr/Palworld/albedo.png", "ironAlbedo", true);
+    mango::core::Global_Data::current()->objectNormal.set_texture("resource/textures/pbr/Palworld/normal.png", "ironNormal", true);
+    mango::core::Global_Data::current()->objectRoughness.set_texture("resource/textures/pbr/Palworld/roughness.png", "ironRoughness", true);
+    mango::core::Global_Data::current()->objectMetalness.set_texture("resource/textures/pbr/Palworld/metalic.png", "ironMetalness", true);
+    mango::core::Global_Data::current()->objectAO.set_texture("resource/textures/pbr/Palworld/metalic.png", "ironAO", true);
+    mango::core::Global_Data::current()->envMapHDR.set_texture_HDR("resource/textures/hdr/appart.hdr", "appartHDR", true);
+    mango::core::Global_Data::current()->envMapIrradianceHDR.set_texture_HDR("resource/textures/hdr/appart_irradiance.hdr", "appartIrradianceHDR", true);
+
+
+    mango::core::Global_Data::current()->gBufferShader.set_shader("resource/shaders/gbuffer.vert", "resource/shaders/gbuffer.frag");
+
+    mango::core::Global_Data::current()->lampShader.set_shader("resource/shaders/lighting/light.vert", "resource/shaders/lighting/light.frag");
+    mango::core::Global_Data::current()->pointBRDFShader.set_shader("resource/shaders/lighting/pointbrdf.vert", "resource/shaders/lighting/pointbrdf.frag");
+    mango::core::Global_Data::current()->directionalBRDFShader.set_shader("resource/shaders/lighting/directionalbrdf.vert", "resource/shaders/lighting/directionalbrdf.frag");
+    mango::core::Global_Data::current()->environmentBRDFShader.set_shader("resource/shaders/lighting/ibl/enviromentbrdf.vert", "resource/shaders/lighting/ibl/enviromentbrdf.frag");
+    mango::core::Global_Data::current()->prefilterBRDFShader.set_shader("resource/shaders/lighting/ibl/enviromentbrdf.vert", "resource/shaders/lighting/ibl/prefilterbrdf.frag");
+    mango::core::Global_Data::current()->integrateBRDFShader.set_shader("resource/shaders/lighting/ibl/enviromentbrdf.vert", "resource/shaders/lighting/ibl/integratebrdf.frag");
+
+    mango::core::Global_Data::current()->ssaoShader.set_shader("resource/shaders/postprocess/ssao.vert", "resource/shaders/postprocess/ssao.frag");
+    mango::core::Global_Data::current()->ssaoBlurShader.set_shader("resource/shaders/postprocess/ssao.vert", "resource/shaders/postprocess/ssaoblur.frag");
+    mango::core::Global_Data::current()->firstpassShader.set_shader("resource/shaders/postprocess/postprocess.vert", "resource/shaders/postprocess/firstpass.frag");
+
+    mango::core::Global_Data::current()->objectModel.load_model_assimp("resource/model/pal/2.obj");
+
+    mango::core::Global_Data::current()->lightPoint1.set_light(mango::core::Global_Data::current()->point_light1, true);
+    mango::core::Global_Data::current()->lightPoint2.set_light(mango::core::Global_Data::current()->point_light2, true);
+    mango::core::Global_Data::current()->lightPoint3.set_light(mango::core::Global_Data::current()->point_light3, true);
+    mango::core::Global_Data::current()->lightDirectional1.set_light(mango::core::Global_Data::current()->directional_light1, false);
+
+    mango::core::Global_Data::current()->skyboxEnv.set_skybox_texture("resource/textures/hdr/canyon.hdr");
+
+    // Set the samplers for the lighting pass
+    mango::core::Global_Data::current()->pointBRDFShader.use_shader();
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->pointBRDFShader.program, "gPosition"), 0);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->pointBRDFShader.program, "gAlbedo"), 1);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->pointBRDFShader.program, "gNormal"), 2);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->pointBRDFShader.program, "gEffects"), 3);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->pointBRDFShader.program, "ssao"), 4);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->pointBRDFShader.program, "envMap"), 5);
+
+    mango::core::Global_Data::current()->directionalBRDFShader.use_shader();
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->directionalBRDFShader.program, "gPosition"), 0);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->directionalBRDFShader.program, "gAlbedo"), 1);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->directionalBRDFShader.program, "gNormal"), 2);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->directionalBRDFShader.program, "gEffects"), 3);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->directionalBRDFShader.program, "ssao"), 4);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->directionalBRDFShader.program, "envMap"), 5);
+
+    mango::core::Global_Data::current()->environmentBRDFShader.use_shader();
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->environmentBRDFShader.program, "gAlbedo"), 1);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->environmentBRDFShader.program, "gNormal"), 2);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->environmentBRDFShader.program, "gEffects"), 3);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->environmentBRDFShader.program, "ssao"), 4);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->environmentBRDFShader.program, "envMap"), 5);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->environmentBRDFShader.program, "envMapIrradiance"), 6);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->environmentBRDFShader.program, "envMapPrefilter"), 7);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->environmentBRDFShader.program, "brdfLUT"), 8);
+    //
+    mango::core::Global_Data::current()->prefilterBRDFShader.use_shader();
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->prefilterBRDFShader.program, "gPosition"), 0);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->prefilterBRDFShader.program, "gNormal"), 1);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->prefilterBRDFShader.program, "gRoughness"), 2);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->prefilterBRDFShader.program, "envMap"), 3);
+    //
+    mango::core::Global_Data::current()->integrateBRDFShader.use_shader();
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->integrateBRDFShader.program, "gPosition"), 0);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->integrateBRDFShader.program, "gNormal"), 1);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->integrateBRDFShader.program, "gRoughness"), 2);
+
+    mango::core::Global_Data::current()->ssaoShader.use_shader();
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->ssaoShader.program, "gPosition"), 0);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->ssaoShader.program, "gNormal"), 1);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->ssaoShader.program, "texNoise"), 2);
+
+    mango::core::Global_Data::current()->firstpassShader.use_shader();
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->firstpassShader.program, "ssao"), 1);
+    glUniform1i(glGetUniformLocation(mango::core::Global_Data::current()->firstpassShader.program, "gEffects"), 2);
+
+
+    // Setup
+    // --------------------------------------------------------------
+    // G-Buffer setup
+    mango::core::gBufferSetup();
+
+
+    // SSAO setup
+    mango::core::ssaoSetup();
+
+
+    // Post-processing setup
+
+
+    mango::core::postprocessSetup();
+
+
+    //----------
+    // IBL setup
+    //----------
+    mango::core::iblSetup();
+    // --------------------------------------------------------------
+
+    // Queries setting for profiling
+    GLuint64 startGeometryTime, startLightingTime, startSSAOTime, startPostprocessTime, startForwardTime, startGUITime;
+    GLuint64 stopGeometryTime, stopLightingTime, stopSSAOTime, stopPostprocessTime, stopForwardTime, stopGUITime;
+
+    unsigned int queryIDGeometry[2];
+    unsigned int queryIDLighting[2];
+    unsigned int queryIDSSAO[2];
+    unsigned int queryIDPostprocess[2];
+    unsigned int queryIDForward[2];
+    unsigned int queryIDGUI[2];
+
+    glGenQueries(2, queryIDGeometry);
+    glGenQueries(2, queryIDLighting);
+    glGenQueries(2, queryIDSSAO);
+    glGenQueries(2, queryIDPostprocess);
+    glGenQueries(2, queryIDForward);
+    glGenQueries(2, queryIDGUI);
+
+
+
 
     // Main loop
 #ifdef __EMSCRIPTEN__
@@ -265,6 +366,9 @@ int main(int, char**)
     while (!glfwWindowShouldClose(window))
 #endif
     {
+        GLfloat currentFrame = glfwGetTime();
+        mango::core::Global_Data::current()->deltaTime = currentFrame - mango::core::Global_Data::current()->lastFrame;
+        mango::core::Global_Data::current()->lastFrame = currentFrame;
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
@@ -276,6 +380,7 @@ int main(int, char**)
             ImGui_ImplGlfw_Sleep(10);
             continue;
         }
+        mango::core::cameraMove();
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();

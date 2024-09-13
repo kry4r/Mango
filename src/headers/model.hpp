@@ -16,7 +16,7 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-
+#include "tiny_gltf.h"
 #include "mesh.hpp"
 
 using namespace std;
@@ -26,7 +26,9 @@ namespace mango::model
     class Model
     {
     public:
-        auto load_model(std::string path) -> void;
+        auto load_model_assimp(std::string path) -> void;
+        auto load_model_tinyobj(std::string path) -> void;
+        auto load_model_glTF(std::string path) -> tinygltf::Model;
         auto draw() -> void;
 
     private:
