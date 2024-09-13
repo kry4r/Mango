@@ -51,6 +51,8 @@ namespace mango::light
 
     struct Light_Data
     {
+        Light_Data(Point_Light point_light,Light_Type type):point_light(point_light),light_type(type){}
+        Light_Data(Directional_Light directional_light,Light_Type type):directional_light(directional_light),light_type(type){}
         union {
             Point_Light point_light;
             Directional_Light directional_light;

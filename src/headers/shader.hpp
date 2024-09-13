@@ -14,9 +14,9 @@ namespace mango::shader
 {
     struct Shader_GL
     {
-        GLuint Program;
-        void set_shader(const GLchar* vertex_path, const GLchar* fragment_path);
-        void use_shader();
+        GLuint program;
+        auto set_shader(const GLchar* vertex_path, const GLchar* fragment_path) -> void;
+        auto use_shader() -> void;
     };
 }
 #endif //MANGO_SHADER_H
