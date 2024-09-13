@@ -49,18 +49,18 @@ namespace mango::light
             {
                 auto light_positionViewSpace = glm::vec3(camera.get_view_matrix() * glm::vec4(this->data.point_light.position, 1.0f));
 
-                glUniform3f(glGetUniformLocation(shader.Program,
+                glUniform3f(glGetUniformLocation(shader.program,
                         ("lightPointArray[" + std::to_string(this->data.point_light.light_pointID) + "].position").c_str()),
                     light_positionViewSpace.x,
                     light_positionViewSpace.y,
                     light_positionViewSpace.z);
-                glUniform4f(glGetUniformLocation(shader.Program,
+                glUniform4f(glGetUniformLocation(shader.program,
                         ("lightPointArray[" + std::to_string(this->data.point_light.light_pointID) + "].color").c_str()),
                     this->data.point_light.color.r,
                     this->data.point_light.color.g,
                     this->data.point_light.color.b,
                     this->data.point_light.color.a);
-                glUniform1f(glGetUniformLocation(shader.Program,
+                glUniform1f(glGetUniformLocation(shader.program,
                     ("lightPointArray[" + std::to_string(this->data.point_light.light_pointID) + "].radius").c_str()), this->data.point_light.radius);
                 break;
             }
@@ -69,12 +69,12 @@ namespace mango::light
                 glm::vec3
                     lightDirectionViewSpace = glm::vec3(camera.get_view_matrix() * glm::vec4(this->data.directional_light.direction, 0.0f));
 
-                glUniform3f(glGetUniformLocation(shader.Program,
+                glUniform3f(glGetUniformLocation(shader.program,
                         ("lightDirectionalArray[" + std::to_string(this->data.directional_light.light_directionalID) + "].direction").c_str()),
                     lightDirectionViewSpace.x,
                     lightDirectionViewSpace.y,
                     lightDirectionViewSpace.z);
-                glUniform4f(glGetUniformLocation(shader.Program,
+                glUniform4f(glGetUniformLocation(shader.program,
                         ("lightDirectionalArray[" + std::to_string(this->data.directional_light.light_directionalID) + "].color").c_str()),
                     this->data.directional_light.color.r,
                     this->data.directional_light.color.g,

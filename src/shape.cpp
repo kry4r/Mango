@@ -95,12 +95,12 @@ namespace mango::model
     {
         lighting_shader.use_shader();
 
-        GLint modelLoc = glGetUniformLocation(lighting_shader.Program, "model");
-        GLint viewLoc = glGetUniformLocation(lighting_shader.Program, "view");
-        GLint projLoc = glGetUniformLocation(lighting_shader.Program, "projection");
+        GLint modelLoc = glGetUniformLocation(lighting_shader.program, "model");
+        GLint viewLoc = glGetUniformLocation(lighting_shader.program, "view");
+        GLint projLoc = glGetUniformLocation(lighting_shader.program, "projection");
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-        glUniform3f(glGetUniformLocation(lighting_shader.Program, "viewPos"),
+        glUniform3f(glGetUniformLocation(lighting_shader.program, "viewPos"),
             camera.camera_position.x,
             camera.camera_position.y,
             camera.camera_position.z);

@@ -65,15 +65,15 @@ namespace mango::shader
         }
 
         // Shader Program
-        this->Program = glCreateProgram();
-        glAttachShader(this->Program, vertex);
-        glAttachShader(this->Program, fragment);
-        glLinkProgram(this->Program);
-        glGetProgramiv(this->Program, GL_LINK_STATUS, &success);
+        this->program = glCreateProgram();
+        glAttachShader(this->program, vertex);
+        glAttachShader(this->program, fragment);
+        glLinkProgram(this->program);
+        glGetProgramiv(this->program, GL_LINK_STATUS, &success);
 
         if (!success)
         {
-            glGetProgramInfoLog(this->Program, 512, NULL, infoLog);
+            glGetProgramInfoLog(this->program, 512, NULL, infoLog);
             std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
         }
 
@@ -83,6 +83,6 @@ namespace mango::shader
 
     void Shader_GL::use_shader()
     {
-        glUseProgram(this->Program);
+        glUseProgram(this->program);
     }
 }

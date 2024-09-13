@@ -17,18 +17,18 @@ namespace mango::skybox
         glActiveTexture(GL_TEXTURE0);
         this->envmap.use_texture();
 
-        glUniform1i(glGetUniformLocation(shader.Program, "envMap"), 0);
-        glUniformMatrix4fv(glGetUniformLocation(shader.Program, "inverseView"),
+        glUniform1i(glGetUniformLocation(shader.program, "envMap"), 0);
+        glUniformMatrix4fv(glGetUniformLocation(shader.program, "inverseView"),
             1,
             GL_FALSE,
             glm::value_ptr(glm::transpose(view)));
-        glUniformMatrix4fv(glGetUniformLocation(shader.Program, "inverseProj"),
+        glUniformMatrix4fv(glGetUniformLocation(shader.program, "inverseProj"),
             1,
             GL_FALSE,
             glm::value_ptr(glm::inverse(projection)));
-        glUniform1f(glGetUniformLocation(shader.Program, "cameraAperture"), this->camera_aperture);
-        glUniform1f(glGetUniformLocation(shader.Program, "cameraShutterSpeed"), this->camera_shutter_speed);
-        glUniform1f(glGetUniformLocation(shader.Program, "cameraISO"), this->camera_iso);
+        glUniform1f(glGetUniformLocation(shader.program, "cameraAperture"), this->camera_aperture);
+        glUniform1f(glGetUniformLocation(shader.program, "cameraShutterSpeed"), this->camera_shutter_speed);
+        glUniform1f(glGetUniformLocation(shader.program, "cameraISO"), this->camera_iso);
     }
 
     auto Skybox::set_exposure(GLfloat aperture, GLfloat shutter_speed, GLfloat iso) -> void
