@@ -31,7 +31,7 @@ namespace mango::material
 
             glActiveTexture(GL_TEXTURE0 + i);
             current_texure.use_texture();
-            glUniform1i(glGetUniformLocation(this->material_shader.Program, current_uniform.c_str()), i);
+            glUniform1i(glGetUniformLocation(this->material_shader.program, current_uniform.c_str()), i);
 
             std::cout << "------" << std::endl;
         }

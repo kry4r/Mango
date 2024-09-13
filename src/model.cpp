@@ -62,65 +62,6 @@ namespace mango::model
         }
     }
 
-    auto Model::load_model_glTF(std::string path) -> tinygltf::Model
-    {
-        tinygltf::Model model;
-        tinygltf::TinyGLTF loader;
-        std::string err, warn;
-
-        if (!loader.LoadASCIIFromFile(&model, &err, &warn, path))
-        {
-            std::cerr << "TinyGLTF: " << warn << err << std::endl;
-            return model;
-        }
-
-        for (const auto& mesh : model.meshes)
-        {
-            for (const auto& primitive : mesh.primitives)
-            {
-                std::vector<Vertex> vertices;
-                std::vector<GLuint> indices;
-
-                const float* bufferPos = nullptr;
-                const float* bufferNormals = nullptr;
-                const float* bufferTexCoords = nullptr;
-
-                const tinygltf::Accessor& posAccessor = model.accessors[primitive.attributes.find("POSITION")->second];
-                const tinygltf::BufferView& posView = model.bufferViews[posAccessor.bufferView];
-                bufferPos = reinterpret_cast<const float*>(&(model.buffers[posView.buffer].data[posAccessor.byteOffset + posView.byteOffset]));
-
-                const tinygltf::Accessor& normAccessor = model.accessors[primitive.attributes.find("NORMAL")->second];
-                const tinygltf::BufferView& normView = model.bufferViews[normAccessor.bufferView];
-                bufferNormals = reinterpret_cast<const float*>(&(model.buffers[normView.buffer].data[normAccessor.byteOffset + normView.byteOffset]));
-
-                const tinygltf::Accessor& texAccessor = model.accessors[primitive.attributes.find("TEXCOORD_0")->second];
-                const tinygltf::BufferView& texView = model.bufferViews[texAccessor.bufferView];
-                bufferTexCoords = reinterpret_cast<const float*>(&(model.buffers[texView.buffer].data[texAccessor.byteOffset + texView.byteOffset]));
-
-                for (size_t i = 0; i < posAccessor.count; ++i)
-                {
-                    Vertex vertex;
-                    vertex.position = glm::vec3(bufferPos[3 * i + 0], bufferPos[3 * i + 1], bufferPos[3 * i + 2]);
-                    vertex.normal = glm::vec3(bufferNormals[3 * i + 0], bufferNormals[3 * i + 1], bufferNormals[3 * i + 2]);
-                    vertex.tex_coords = glm::vec2(bufferTexCoords[2 * i + 0], bufferTexCoords[2 * i + 1]);
-                    vertices.push_back(vertex);
-                }
-
-                const tinygltf::Accessor& indexAccessor = model.accessors[primitive.indices];
-                const tinygltf::BufferView& indexView = model.bufferViews[indexAccessor.bufferView];
-                const unsigned short* bufferIndices = reinterpret_cast<const unsigned short*>(&(model.buffers[indexView.buffer].data[indexAccessor.byteOffset + indexView.byteOffset]));
-
-                for (size_t i = 0; i < indexAccessor.count; ++i)
-                {
-                    indices.push_back(bufferIndices[i]);
-                }
-
-                this->meshes.push_back(Mesh(vertices, indices));
-            }
-        }
-        return model;
-    }
-
     auto Model::draw() -> void
     {
         for (GLuint i = 0; i < this->meshes.size(); i++)
