@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.10)
+project(Mango)
+
+set(CMAKE_CXX_STANDARD 23)
+find_package(glad CONFIG REQUIRED)
+find_package(Stb REQUIRED)
+find_package(assimp CONFIG REQUIRED)
+find_package(tinyobjloader CONFIG REQUIRED)
+find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
+add_subdirectory(3rdparty/glfw)
+add_subdirectory(3rdparty/imgui)
+add_subdirectory(3rdparty/glm)
+add_subdirectory(src)
+
+include_directories(3rdparty/imgui)
+add_executable(Mango Mango.cpp)
+target_include_directories(Mango PRIVATE src/headers ${Stb_INCLUDE_DIR} 3rdparty/glm/glm 3rdparty/imgui 3rdparty/glfw/include 3rdparty/imgui/backends)
+target_link_libraries(Mango src)
